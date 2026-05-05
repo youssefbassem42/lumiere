@@ -2,9 +2,14 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { productService } from "@/modules/products/product.service";
+import { reviewService } from "@/modules/reviews/review.service";
 import { StarRating } from "@/components/ui/StarRating";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { WishlistButton } from "@/components/product/WishlistButton";
+import { ReviewSection } from "@/components/product/ReviewSection";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -25,6 +30,11 @@ export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
   const product = await productService.getProductBySlug(slug);
   if (!product) notFound();
+  const session = await getServerSession(authOptions);
+  const [canReview, reviews] = await Promise.all([
+    reviewService.canReview(session?.user?.id, product.id),
+    reviewService.listForProduct(product.id, { sort: "newest", page: 1, limit: 10 }),
+  ]);
 
   const isInStock = product.stock > 0;
   const discount =
@@ -154,12 +164,11 @@ export default async function ProductDetailPage({ params }: Props) {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <AddToCartButton productId={product.id} disabled={!isInStock} />
-            <button className="btn btn-secondary btn-lg" aria-label="Add to wishlist">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-              </svg>
-              Wishlist
-            </button>
+            <WishlistButton 
+              productId={product.id} 
+              initialInWishlist={false} // Will be updated by client side fetch
+              className="btn btn-secondary btn-lg flex items-center justify-center gap-2"
+            />
           </div>
 
           {/* Trust badges */}
@@ -178,6 +187,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+      <ReviewSection productId={product.id} canReview={canReview} initialReviews={reviews} />
     </div>
   );
 }

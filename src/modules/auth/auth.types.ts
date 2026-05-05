@@ -4,12 +4,15 @@ export interface AuthUser {
   email: string;
   role: "USER" | "ADMIN";
   avatar: string | null;
+  emailVerified: Date | null;
 }
 
 export interface RegisterDTO {
   name: string;
   email: string;
   password: string;
+  birthDate: Date;
+  gender: "MALE" | "FEMALE";
 }
 
 export interface LoginDTO {

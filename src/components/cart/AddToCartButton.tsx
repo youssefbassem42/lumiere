@@ -27,7 +27,9 @@ export function AddToCartButton({ productId, disabled }: AddToCartButtonProps) {
       return;
     }
 
-    startTransition(() => router.push("/cart"));
+    startTransition(() => {
+      // Just visually complete the transition
+    });
   }
 
   return (

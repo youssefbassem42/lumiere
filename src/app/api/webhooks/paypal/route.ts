@@ -1,47 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { paymentService } from "@/modules/payments/payment.service";
-import { toErrorResponse } from "@/modules/shared/errors";
 
 export async function POST(request: NextRequest) {
   try {
-    const event = await request.json() as {
-      event_type: string;
-      resource: {
-        id?: string;
-        supplementary_data?: { related_ids?: { order_id?: string } };
-        status_details?: { reason?: string };
-      };
-    };
+    const payload = await request.text();
+    const body = JSON.parse(payload);
+    
+    // Verify signature
+    await paymentService.verifyPaypalWebhook(request.headers, body);
 
-    await paymentService.verifyPaypalWebhook(request.headers, event);
-
-    const paypalOrderId =
-      event.resource.supplementary_data?.related_ids?.order_id ?? event.resource.id;
-
-    if (
-      paypalOrderId &&
-      (event.event_type === "CHECKOUT.ORDER.APPROVED" ||
-        event.event_type === "PAYMENT.CAPTURE.COMPLETED")
-    ) {
-      await paymentService.markPaid("paypal", paypalOrderId);
-    }
-
-    if (
-      paypalOrderId &&
-      (event.event_type === "CHECKOUT.ORDER.VOIDED" ||
-        event.event_type === "PAYMENT.CAPTURE.DENIED" ||
-        event.event_type === "PAYMENT.CAPTURE.REFUNDED")
-    ) {
-      await paymentService.markFailed(
-        "paypal",
-        paypalOrderId,
-        event.resource.status_details?.reason ?? event.event_type
-      );
+    // Handle events
+    if (body.event_type === "CHECKOUT.ORDER.APPROVED") {
+      const orderId = body.resource.id;
+      await paymentService.markPaid("paypal", orderId);
+    } else if (body.event_type === "PAYMENT.CAPTURE.DENIED") {
+      const orderId = body.resource.id; // Or wherever PayPal stores the order reference
+      await paymentService.markFailed("paypal", orderId, "Payment capture denied");
     }
 
     return NextResponse.json({ received: true });
-  } catch (error) {
-    const { body, status } = toErrorResponse(error);
-    return NextResponse.json(body, { status });
+  } catch (err: any) {
+    console.error("PayPal Webhook Error:", err.message);
+    return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 });
   }
 }

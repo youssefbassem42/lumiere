@@ -34,7 +34,7 @@ async function stripeRequest<T>(path: string, body: URLSearchParams): Promise<T>
 }
 
 async function getPaypalAccessToken() {
-  const clientId = requireEnv("PAYPAL_CLIENT_ID");
+  const clientId = requireEnv("NEXT_PUBLIC_PAYPAL_CLIENT_ID");
   const secret = requireEnv("PAYPAL_CLIENT_SECRET");
   const baseUrl = process.env.PAYPAL_BASE_URL ?? "https://api-m.sandbox.paypal.com";
 
@@ -88,7 +88,7 @@ export const paymentService = {
           amount: String(cents(params.amount)),
           currency: params.currency,
           "metadata[orderId]": params.orderId,
-          automatic_payment_methods: "enabled",
+          "automatic_payment_methods[enabled]": "true",
         })
       );
 

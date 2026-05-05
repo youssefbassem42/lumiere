@@ -31,26 +31,83 @@ enum PaymentStatus {
   FAILED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 ///////////////////////
 // USER & AUTH
 ///////////////////////
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       String    @id @default(cuid())
+  name                     String?
+  email                    String    @unique
+  emailVerified            DateTime?
+  emailVerificationToken   String?
+  emailVerificationExpiry  DateTime?
+  password                 String?
+  birthDate                DateTime?
+  gender                   Gender?
+  role                     Role      @default(USER)
+  avatar                   String?
+  resetToken               String?
+  resetTokenExpiry         DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   // Relations
+  accounts  Account[]
+  sessions  Session[]
   addresses Address[]
   reviews   Review[]
+  reviewReplies ReviewReply[]
   orders    Order[]
   cart      Cart?
   wishlist  Wishlist?
+
+  @@index([emailVerificationToken])
+  @@index([resetToken])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Address {
@@ -100,6 +157,8 @@ model Product {
   sku          String?  @unique
   isFeatured   Boolean  @default(false)
   isPublished  Boolean  @default(true)
+  avgRating    Float    @default(0)
+  reviewCount  Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -128,17 +187,36 @@ model ProductImage {
 
 model Review {
   id        String   @id @default(cuid())
-  rating    Int // 1-5
-  comment   String?
+  rating    Float
+  comment   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userId    String
   productId String
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  replies ReviewReply[]
 
-  @@unique([userId, productId]) // one review per user per product
+  @@unique([userId, productId])
+  @@index([productId, createdAt])
+}
+
+model ReviewReply {
+  id        String   @id @default(cuid())
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  reviewId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@index([userId])
 }
 
 ///////////////////////
@@ -161,7 +239,7 @@ model CartItem {
   productId String
   quantity  Int    @default(1)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)

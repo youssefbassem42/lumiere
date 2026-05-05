@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 type FormState = {
   name: string;
   email: string;
+  birthDate: string;
+  gender: "MALE" | "FEMALE" | "";
   password: string;
   confirmPassword: string;
 };
@@ -15,15 +16,17 @@ type FormState = {
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
+    birthDate: "",
+    gender: "",
     password: "",
     confirmPassword: "",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,12 +43,16 @@ export default function RegisterPage() {
       errs.name = "Name must be at least 2 characters";
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = "Enter a valid email address";
+    if (!form.birthDate) errs.birthDate = "Birth date is required";
+    if (!form.gender) errs.gender = "Gender is required";
     if (!form.password || form.password.length < 8)
       errs.password = "Password must be at least 8 characters";
     else if (!/[A-Z]/.test(form.password))
       errs.password = "Password must contain at least one uppercase letter";
     else if (!/[0-9]/.test(form.password))
       errs.password = "Password must contain at least one number";
+    else if (!/[^A-Za-z0-9]/.test(form.password))
+      errs.password = "Password must contain at least one special character";
     if (form.password !== form.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
     setErrors(errs);
@@ -66,6 +73,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: form.name,
           email: form.email,
+          birthDate: form.birthDate,
+          gender: form.gender,
           password: form.password,
           confirmPassword: form.confirmPassword,
         }),
@@ -78,20 +87,22 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto login after registration
-      await signIn("credentials", {
-        redirect: false,
-        email: form.email,
-        password: form.password,
-      });
-
-      router.push("/");
-      router.refresh();
+      const data = await res.json();
+      setSuccess(data.message ?? "Account created. Please check your email to verify your account.");
+      setForm({ name: "", email: "", birthDate: "", gender: "", password: "", confirmPassword: "" });
     } catch {
       setServerError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
+
+  const passwordRules = [
+    { label: "At least 8 characters", valid: form.password.length >= 8 },
+    { label: "One uppercase letter", valid: /[A-Z]/.test(form.password) },
+    { label: "One number", valid: /[0-9]/.test(form.password) },
+    { label: "One special character", valid: /[^A-Za-z0-9]/.test(form.password) },
+  ];
 
   const fields: { key: keyof FormState; label: string; type: string; placeholder: string; autoComplete: string }[] = [
     { key: "name", label: "Full Name", type: "text", placeholder: "Jane Doe", autoComplete: "name" },
@@ -124,6 +135,26 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {success && (
+            <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+              {success}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+            className="btn btn-secondary w-full mb-4"
+          >
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <span className="h-px bg-zinc-200 flex-1" />
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">or</span>
+            <span className="h-px bg-zinc-200 flex-1" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {fields.map((f) => (
               <div key={f.key}>
@@ -155,11 +186,63 @@ export default function RegisterPage() {
                     </button>
                   )}
                 </div>
+                {f.key === "password" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                    {passwordRules.map((rule) => (
+                      <p
+                        key={rule.label}
+                        className={`text-xs flex items-center gap-1.5 ${rule.valid ? "text-green-700" : "text-zinc-400"}`}
+                      >
+                        <span aria-hidden="true">{rule.valid ? "✔" : "✖"}</span>
+                        {rule.label}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 {errors[f.key] && (
                   <p className="text-red-600 text-xs mt-1">{errors[f.key]}</p>
                 )}
               </div>
             ))}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="register-birthDate" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                  Birth Date
+                </label>
+                <input
+                  id="register-birthDate"
+                  name="birthDate"
+                  type="date"
+                  required
+                  value={form.birthDate}
+                  onChange={handleChange}
+                  className={`input ${errors.birthDate ? "input-error" : ""}`}
+                />
+                {errors.birthDate && <p className="text-red-600 text-xs mt-1">{errors.birthDate}</p>}
+              </div>
+              <div>
+                <label htmlFor="register-gender" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                  Gender
+                </label>
+                <select
+                  id="register-gender"
+                  name="gender"
+                  required
+                  value={form.gender}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, gender: e.target.value as FormState["gender"] }));
+                    setErrors((err) => ({ ...err, gender: undefined }));
+                  }}
+                  className={`input ${errors.gender ? "input-error" : ""}`}
+                >
+                  <option value="">Select</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="MALE">Male</option>
+                </select>
+                {errors.gender && <p className="text-red-600 text-xs mt-1">{errors.gender}</p>}
+              </div>
+            </div>
 
             <button type="submit" disabled={loading} className="btn btn-primary w-full mt-2">
               {loading ? (

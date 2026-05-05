@@ -16,19 +16,15 @@ const productListSelect = {
   comparePrice: true,
   stock: true,
   isFeatured: true,
+  avgRating: true,
+  reviewCount: true,
   images: { select: { id: true, url: true, alt: true }, take: 1 },
   category: { select: { id: true, name: true, slug: true } },
-  reviews: { select: { rating: true } },
 } satisfies Prisma.ProductSelect;
 
 function mapToListItem(
   p: Prisma.ProductGetPayload<{ select: typeof productListSelect }>
 ): ProductListItem {
-  const reviewCount = p.reviews.length;
-  const avgRating =
-    reviewCount > 0
-      ? p.reviews.reduce((s, r) => s + r.rating, 0) / reviewCount
-      : 0;
   return {
     id: p.id,
     name: p.name,
@@ -39,8 +35,8 @@ function mapToListItem(
     isFeatured: p.isFeatured,
     images: p.images,
     category: p.category,
-    avgRating: Math.round(avgRating * 10) / 10,
-    reviewCount,
+    avgRating: p.avgRating,
+    reviewCount: p.reviewCount,
   };
 }
 
@@ -78,7 +74,7 @@ export const productRepository = {
         : sort === "price_desc"
           ? { price: "desc" }
           : sort === "rating"
-            ? { reviews: { _count: "desc" } }
+            ? { avgRating: "desc" }
             : { createdAt: "desc" };
 
     const skip = (page - 1) * limit;
@@ -119,21 +115,16 @@ export const productRepository = {
         sku: true,
         isFeatured: true,
         isPublished: true,
+        avgRating: true,
+        reviewCount: true,
         createdAt: true,
         updatedAt: true,
         images: { select: { id: true, url: true, alt: true } },
         category: { select: { id: true, name: true, slug: true } },
-        reviews: { select: { rating: true } },
       },
     });
 
     if (!p) return null;
-
-    const reviewCount = p.reviews.length;
-    const avgRating =
-      reviewCount > 0
-        ? p.reviews.reduce((s, r) => s + r.rating, 0) / reviewCount
-        : 0;
 
     return {
       id: p.id,
@@ -150,8 +141,8 @@ export const productRepository = {
       updatedAt: p.updatedAt,
       images: p.images,
       category: p.category,
-      avgRating: Math.round(avgRating * 10) / 10,
-      reviewCount,
+      avgRating: p.avgRating,
+      reviewCount: p.reviewCount,
     };
   },
 

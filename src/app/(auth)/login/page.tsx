@@ -5,18 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
-// Minimal inline useForm-like state (no react-hook-form dep needed)
-type FormState = { email: string; password: string };
+type FormState = { email: string; password: string; rememberMe: boolean };
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>({ email: "", password: "" });
+  const [form, setForm] = useState<FormState>({ email: "", password: "", rememberMe: false });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    setForm((f) => ({ ...f, [e.target.name]: value }));
     setError(null);
   };
 
@@ -29,12 +29,17 @@ export default function LoginPage() {
       redirect: false,
       email: form.email,
       password: form.password,
+      rememberMe: String(form.rememberMe),
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password. Please try again.");
+      setError(
+        result.error === "EMAIL_NOT_VERIFIED"
+          ? "Please verify your email before signing in."
+          : "Invalid email or password. Please try again."
+      );
     } else {
       router.push("/");
       router.refresh();
@@ -65,6 +70,20 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+            className="btn btn-secondary w-full mb-4"
+          >
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <span className="h-px bg-zinc-200 flex-1" />
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">or</span>
+            <span className="h-px bg-zinc-200 flex-1" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -119,6 +138,17 @@ export default function LoginPage() {
                 </Link>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <input
+                name="rememberMe"
+                type="checkbox"
+                checked={form.rememberMe}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-600"
+              />
+              Remember me
+            </label>
 
             <button
               type="submit"

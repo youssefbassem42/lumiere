@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ProductListItem } from "@/modules/products/product.types";
+import { WishlistButton } from "./WishlistButton";
 
 interface ProductCardProps {
   product: ProductListItem;
@@ -40,15 +41,10 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Favorite Button (Hidden until hover) */}
-        <button 
-          className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-600 hover:text-blue-600 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center z-10"
-          onClick={(e) => { e.preventDefault(); /* Add to wishlist logic */ }}
-          aria-label="Add to wishlist"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-          </svg>
-        </button>
+        <WishlistButton 
+          productId={product.id}
+          initialInWishlist={false} // Would ideally come from initial fetch if we want SRR
+        />
 
         {/* Badges Overlay */}
         <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
