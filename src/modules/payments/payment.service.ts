@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { AppError } from "@/modules/shared/errors";
 import { emailService } from "@/services/email.service";
+import { cartRepository } from "@/modules/cart/cart.repository";
 
 type PaymentProvider = "stripe" | "paypal";
 
@@ -147,16 +148,29 @@ export const paymentService = {
         select: {
           id: true,
           totalAmount: true,
+          guestEmail: true,
+          userId: true,
           user: { select: { email: true } },
         },
       });
     });
 
-    await emailService.sendPaymentSuccess({
-      to: updatedOrder.user.email,
-      orderId: updatedOrder.id,
-      totalAmount: updatedOrder.totalAmount,
-    });
+    if (updatedOrder.userId) {
+      await cartRepository.clearUserCart(updatedOrder.userId).catch(console.error);
+    }
+
+    const email = updatedOrder.user?.email || updatedOrder.guestEmail;
+    if (email) {
+      await emailService.sendPaymentSuccess({
+        to: email,
+        orderId: updatedOrder.id,
+        totalAmount: updatedOrder.totalAmount,
+      });
+    }
+
+    // Notify sellers
+    const { checkoutService } = await import("@/modules/checkout/checkout.service");
+    await checkoutService.notifySellers(updatedOrder.id).catch(console.error);
   },
 
   async markFailed(provider: PaymentProvider, providerId: string, failureReason?: string) {

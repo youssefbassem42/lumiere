@@ -44,7 +44,6 @@ function ProductsContent() {
 
   // Fetch products on param change
   useEffect(() => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (categorySlug) params.set("categorySlug", categorySlug);
@@ -71,12 +70,14 @@ function ProductsContent() {
       if (value) params.set(key, value);
       else params.delete(key);
       params.delete("page"); // reset page on filter change
+      setLoading(true);
       startTransition(() => router.push(`/products?${params.toString()}`));
     },
     [searchParams, router]
   );
 
   const clearFilters = useCallback(() => {
+    setLoading(true);
     startTransition(() => router.push("/products"));
   }, [router]);
 
@@ -172,6 +173,7 @@ function ProductsContent() {
           <div>
             <h3 className="text-sm font-semibold text-zinc-700 mb-3 uppercase tracking-wide">Search</h3>
             <SearchBar
+              key={search}
               onSearch={(q) => updateParam("search", q)}
               defaultValue={search}
               placeholder="Search products…"

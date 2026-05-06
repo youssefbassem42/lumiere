@@ -9,6 +9,8 @@ export interface OrderListItemDTO {
 
 export interface OrderDetailDTO extends OrderListItemDTO {
   subtotal: number;
+  discountAmount: number;
+  promoCode: string | null;
   taxAmount: number;
   shippingFee: number;
   payment: {

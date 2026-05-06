@@ -1,6 +1,20 @@
 import { db } from "@/lib/db";
 
 export const wishlistRepository = {
+  async listProductIds(userId: string): Promise<string[]> {
+    const wishlist = await db.wishlist.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!wishlist) return [];
+
+    const items = await db.wishlistItem.findMany({
+      where: { wishlistId: wishlist.id },
+      select: { productId: true },
+    });
+    return items.map((item) => item.productId);
+  },
+
   async getWishlist(userId: string) {
     let wishlist = await db.wishlist.findUnique({
       where: { userId },
@@ -18,6 +32,11 @@ export const wishlistRepository = {
     });
 
     if (!wishlist) {
+      const userExists = await db.user.count({ where: { id: userId } });
+      if (!userExists) {
+        throw new Error("Cannot create wishlist: User does not exist");
+      }
+
       wishlist = await db.wishlist.create({
         data: { userId },
         include: { items: { include: { product: { include: { images: true } } } } },

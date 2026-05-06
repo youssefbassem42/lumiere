@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
-    const wishlist = await wishlistService.getWishlist(session.user.id);
-    return NextResponse.json(wishlist);
+    const productIds = await wishlistService.getWishlistProductIds(session.user.id);
+    return NextResponse.json({ productIds });
   } catch (error) {
     const { body, status } = toErrorResponse(error);
     return NextResponse.json(body, { status });

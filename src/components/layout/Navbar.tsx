@@ -34,7 +34,6 @@ export function Navbar() {
     { label: "New Arrivals", href: "/products?sort=newest" },
     { label: "Collections", href: "/products?view=categories" },
     { label: "Brands", href: "/products" },
-    { label: "Journal", href: "#" },
   ];
 
   return (

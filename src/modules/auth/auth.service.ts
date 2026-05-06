@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { Role } from "@prisma/client";
 import { emailService } from "@/services/email.service";
 import { AppError } from "@/modules/shared/errors";
 import { authRepository } from "./auth.repository";
@@ -24,7 +25,7 @@ function publicUser(user: {
   id: string;
   name: string | null;
   email: string;
-  role: "USER" | "ADMIN";
+  role: Role;
   avatar: string | null;
   emailVerified: Date | null;
 }): AuthUser {

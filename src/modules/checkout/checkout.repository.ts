@@ -6,13 +6,15 @@ import type { CheckoutPricing } from "./checkout.types";
 
 export const checkoutRepository = {
   async createPendingOrder(params: {
-    userId: string;
+    userId?: string;
+    guestEmail?: string;
     cart: CartDTO;
     address: CheckoutAddressDTO;
     pricing: CheckoutPricing;
-    provider: "stripe" | "paypal";
+    provider: "stripe" | "paypal" | "cod";
+    promoCode?: string | null;
   }) {
-    const { userId, cart, address, pricing, provider } = params;
+    const { userId, guestEmail, cart, address, pricing, provider, promoCode } = params;
 
     return db.$transaction(async (tx) => {
       for (const item of cart.items) {
@@ -28,9 +30,12 @@ export const checkoutRepository = {
 
       return tx.order.create({
         data: {
-          userId,
+          ...(userId ? { userId } : {}),
+          guestEmail: guestEmail || null,
           status: "PENDING",
           subtotal: pricing.subtotal,
+          discountAmount: pricing.discountAmount,
+          promoCode: promoCode || null,
           taxAmount: pricing.taxAmount,
           shippingFee: pricing.shippingFee,
           totalAmount: pricing.totalAmount,

@@ -2,6 +2,7 @@ export interface ReviewDTO {
   id: string;
   rating: number;
   comment: string;
+  isVerifiedPurchase: boolean;
   createdAt: string;
   updatedAt: string;
   user: {

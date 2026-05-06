@@ -30,6 +30,14 @@ export function generateInvoicePdf(order: OrderDetailDTO): Buffer {
     ),
     "",
     `Subtotal: ${money(order.subtotal, order.currency)}`,
+    ...(order.discountAmount > 0
+      ? [
+          `Discount${order.promoCode ? ` (${order.promoCode})` : ""}: -${money(
+            order.discountAmount,
+            order.currency
+          )}`,
+        ]
+      : []),
     `Tax: ${money(order.taxAmount, order.currency)}`,
     `Shipping: ${money(order.shippingFee, order.currency)}`,
     `Total: ${money(order.totalAmount, order.currency)}`,

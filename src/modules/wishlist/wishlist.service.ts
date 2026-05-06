@@ -1,6 +1,15 @@
 import { wishlistRepository } from "./wishlist.repository";
 
 export const wishlistService = {
+  async getWishlistProductIds(userId: string) {
+    return wishlistRepository.listProductIds(userId);
+  },
+
+  async isInWishlist(userId: string | undefined, productId: string) {
+    if (!userId) return false;
+    return wishlistRepository.isInWishlist(userId, productId);
+  },
+
   async getWishlist(userId: string) {
     return wishlistRepository.getWishlist(userId);
   },

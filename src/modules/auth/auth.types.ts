@@ -1,8 +1,10 @@
+import { Role } from "@prisma/client";
+
 export interface AuthUser {
   id: string;
   name: string | null;
   email: string;
-  role: "USER" | "ADMIN";
+  role: Role;
   avatar: string | null;
   emailVerified: Date | null;
 }

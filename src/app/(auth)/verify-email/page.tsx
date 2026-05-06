@@ -11,11 +11,7 @@ function VerifyEmailStatus() {
   const [message, setMessage] = useState("Verifying your email...");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("Missing verification token.");
-      return;
-    }
+    if (!token) return;
 
     fetch("/api/auth/verify-email", {
       method: "POST",
@@ -33,6 +29,14 @@ function VerifyEmailStatus() {
         setMessage(error.message);
       });
   }, [token]);
+
+  if (!token) {
+    return (
+      <div className="p-4 rounded-lg border text-sm bg-red-50 border-red-200 text-red-700">
+        Missing verification token.
+      </div>
+    );
+  }
 
   return (
     <div className={`p-4 rounded-lg border text-sm ${

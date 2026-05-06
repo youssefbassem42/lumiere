@@ -101,6 +101,12 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
                 <span>Subtotal</span>
                 <span>${order.subtotal.toFixed(2)}</span>
               </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-slate-500 text-sm">
+                  <span>Discount{order.promoCode ? ` (${order.promoCode})` : ""}</span>
+                  <span className="text-slate-900">-${order.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-500 text-sm">
                 <span>Shipping</span>
                 <span>${order.shippingFee.toFixed(2)}</span>

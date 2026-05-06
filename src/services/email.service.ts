@@ -134,8 +134,14 @@ export const emailService = {
   }) {
     await sendEmail({
       to: params.to,
-      subject: `Order ${params.orderId} received`,
-      html: `<h1>Order received</h1><p>Your order is pending payment confirmation.</p><p>Total: $${params.totalAmount.toFixed(2)}</p>`,
+      subject: `Lumière Order Received: #${params.orderId.slice(-8)}`,
+      html: renderTemplate({
+        preheader: "We've received your order and are getting it ready.",
+        title: "Order Confirmed",
+        body: `<p style="margin:0 0 12px;">Thank you for shopping with Lumière!</p><p style="margin:0;">We're currently processing your order #${params.orderId.slice(-8)}. Your total is <strong>$${params.totalAmount.toFixed(2)}</strong>.</p>`,
+        ctaLabel: "View Order",
+        ctaUrl: `${process.env.NEXTAUTH_URL}/orders/${params.orderId}`,
+      }),
     });
   },
 
@@ -146,8 +152,14 @@ export const emailService = {
   }) {
     await sendEmail({
       to: params.to,
-      subject: `Payment confirmed for order ${params.orderId}`,
-      html: `<h1>Payment confirmed</h1><p>We received your payment.</p><p>Total: $${params.totalAmount.toFixed(2)}</p>`,
+      subject: `Payment Successful: #${params.orderId.slice(-8)}`,
+      html: renderTemplate({
+        preheader: "Your payment has been successfully processed.",
+        title: "Payment Confirmed",
+        body: `<p style="margin:0 0 12px;">We've successfully received your payment of <strong>$${params.totalAmount.toFixed(2)}</strong>.</p><p style="margin:0;">We will notify you again once your order ships.</p>`,
+        ctaLabel: "View Order",
+        ctaUrl: `${process.env.NEXTAUTH_URL}/orders/${params.orderId}`,
+      }),
     });
   },
 
@@ -158,8 +170,32 @@ export const emailService = {
   }) {
     await sendEmail({
       to: params.to,
-      subject: `Order ${params.orderId} is ${params.status.toLowerCase()}`,
-      html: `<h1>Shipping update</h1><p>Your order status is now ${params.status}.</p>`,
+      subject: `Order Update: Your package is ${params.status.toLowerCase()}`,
+      html: renderTemplate({
+        preheader: `Great news! Your order status has been updated to ${params.status}.`,
+        title: `Order ${params.status}`,
+        body: `<p style="margin:0 0 12px;">Your order #${params.orderId.slice(-8)} is now marked as <strong>${params.status}</strong>.</p><p style="margin:0;">If you have any questions, feel free to reply to this email.</p>`,
+        ctaLabel: "Track Order",
+        ctaUrl: `${process.env.NEXTAUTH_URL}/orders/${params.orderId}`,
+      }),
+    });
+  },
+
+  async sendSellerNotification(params: {
+    to: string;
+    orderId: string;
+    productName: string;
+  }) {
+    await sendEmail({
+      to: params.to,
+      subject: `New Sale: ${params.productName}`,
+      html: renderTemplate({
+        preheader: "You have a new order to fulfill.",
+        title: "You made a sale!",
+        body: `<p style="margin:0 0 12px;">Congratulations! Your product <strong>${params.productName}</strong> was just purchased in order #${params.orderId.slice(-8)}.</p><p style="margin:0;">Please check your seller dashboard to fulfill this order.</p>`,
+        ctaLabel: "Seller Dashboard",
+        ctaUrl: `${process.env.NEXTAUTH_URL}/seller/orders`,
+      }),
     });
   },
 };

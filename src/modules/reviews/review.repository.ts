@@ -6,6 +6,7 @@ const reviewSelect = {
   id: true,
   rating: true,
   comment: true,
+  isVerifiedPurchase: true,
   createdAt: true,
   updatedAt: true,
   user: { select: { id: true, name: true } },
@@ -25,6 +26,7 @@ function mapReview(review: {
   id: string;
   rating: number;
   comment: string;
+  isVerifiedPurchase: boolean;
   createdAt: Date;
   updatedAt: Date;
   user: { id: string; name: string | null };
@@ -93,7 +95,7 @@ export const reviewRepository = {
 
   async create(userId: string, data: { productId: string; rating: number; comment: string }) {
     const review = await db.review.create({
-      data: { ...data, userId },
+      data: { ...data, userId, isVerifiedPurchase: true },
       select: reviewSelect,
     });
     await refreshProductRating(data.productId);

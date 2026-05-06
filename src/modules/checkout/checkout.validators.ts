@@ -10,8 +10,10 @@ export const checkoutAddressSchema = z.object({
 });
 
 export const checkoutSchema = z.object({
-  provider: z.enum(["stripe", "paypal"]),
+  provider: z.enum(["stripe", "paypal", "cod"]),
   shippingAddress: checkoutAddressSchema,
+  promoCode: z.string().trim().min(2).max(32).optional().or(z.literal("")),
+  guestEmail: z.string().email().optional().or(z.literal("")),
 });
 
 export type CheckoutAddressDTO = z.infer<typeof checkoutAddressSchema>;

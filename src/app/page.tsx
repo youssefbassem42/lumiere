@@ -12,7 +12,7 @@ export default async function HomePage() {
       <section className="relative h-[85vh] min-h-[600px] w-full flex items-center justify-center bg-slate-100 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image 
-            src="https://images.unsplash.com/photo-1618220179428-22790b46a0eb?auto=format&fit=crop&q=80&w=2000" 
+            src="https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=2000" 
             alt="Hero Background - Minimalist Interior"
             fill
             className="object-cover object-center opacity-90"

@@ -4,7 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function ProfileInfoForm({ user, mode = "profile" }: { user: any, mode?: "profile" | "password" }) {
+type ProfileUser = {
+  name: string | null;
+  email: string;
+  phone: string | null;
+  password: string | null;
+  addresses?: Array<{ isDefault: boolean; phone: string }>;
+};
+
+export default function ProfileInfoForm({
+  user,
+  mode = "profile",
+}: {
+  user: ProfileUser;
+  mode?: "profile" | "password";
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -48,7 +62,7 @@ export default function ProfileInfoForm({ user, mode = "profile" }: { user: any,
         
         {message && <div className="text-sm text-blue-600">{message}</div>}
         
-        <Link href="/auth/reset-password" className="text-sm text-blue-600 hover:underline mt-2">
+        <Link href="/reset-password" className="text-sm text-blue-600 hover:underline mt-2">
           Forgot password?
         </Link>
         
@@ -59,8 +73,8 @@ export default function ProfileInfoForm({ user, mode = "profile" }: { user: any,
     );
   }
 
-  const defaultAddress = user.addresses?.find((a: any) => a.isDefault);
-  const defaultPhone = defaultAddress?.phone || "";
+  const defaultAddress = user.addresses?.find((a) => a.isDefault);
+  const defaultPhone = user.phone || defaultAddress?.phone || "";
 
   return (
     <form 

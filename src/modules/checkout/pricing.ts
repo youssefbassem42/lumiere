@@ -9,17 +9,25 @@ export function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function calculateCheckoutPricing(cart: CartDTO): CheckoutPricing {
+export function calculateCheckoutPricing(
+  cart: CartDTO,
+  params?: { discountAmount?: number }
+): CheckoutPricing {
   const subtotal = roundMoney(cart.subtotal);
-  const taxAmount = roundMoney(subtotal * TAX_RATE);
+  const discountAmount = roundMoney(Math.max(0, params?.discountAmount ?? 0));
+  const taxableSubtotal = roundMoney(Math.max(0, subtotal - discountAmount));
+  const taxAmount = roundMoney(taxableSubtotal * TAX_RATE);
   const shippingFee =
-    subtotal === 0 || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+    taxableSubtotal === 0 || taxableSubtotal >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : STANDARD_SHIPPING_FEE;
 
   return {
     subtotal,
+    discountAmount,
     taxAmount,
     shippingFee,
-    totalAmount: roundMoney(subtotal + taxAmount + shippingFee),
+    totalAmount: roundMoney(taxableSubtotal + taxAmount + shippingFee),
     currency: "usd",
   };
 }

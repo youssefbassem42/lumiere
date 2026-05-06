@@ -8,9 +8,12 @@ import { calculateCheckoutPricing } from "./pricing";
 import type { CheckoutDTO } from "./checkout.validators";
 import type { CheckoutResult } from "./checkout.types";
 
+import { cartService } from "@/modules/cart/cart.service";
+import type { CartIdentity } from "@/modules/cart/cart.types";
+
 export const checkoutService = {
-  async startCheckout(userId: string, dto: CheckoutDTO): Promise<CheckoutResult> {
-    const cart = await cartRepository.getCartItemsForCheckout(userId);
+  async startCheckout(identity: CartIdentity, dto: CheckoutDTO): Promise<CheckoutResult> {
+    const cart = await cartService.getCart(identity);
     if (cart.items.length === 0) {
       throw new AppError("Cart is empty", 400, "EMPTY_CART");
     }
@@ -25,34 +28,75 @@ export const checkoutService = {
       }
     }
 
-    const pricing = calculateCheckoutPricing(cart);
+    const promoCode =
+      dto.promoCode && dto.promoCode.trim() ? dto.promoCode.trim().toUpperCase() : null;
+
+    let discountAmount = 0;
+    if (promoCode) {
+      const promo = await db.promoCode.findUnique({
+        where: { code: promoCode },
+      });
+      if (!promo || !promo.isActive) {
+        throw new AppError("Invalid promo code", 400, "INVALID_PROMO_CODE");
+      }
+      if (promo.expiryDate && new Date() > promo.expiryDate) {
+        throw new AppError("Promo code has expired", 400, "EXPIRED_PROMO_CODE");
+      }
+      if (promo.usageLimit !== null && promo.usedCount >= promo.usageLimit) {
+        throw new AppError("Promo code usage limit reached", 400, "LIMIT_REACHED");
+      }
+
+      discountAmount = promo.discountType === "PERCENTAGE" 
+        ? (cart.subtotal * promo.discountValue) / 100
+        : promo.discountValue;
+        
+      discountAmount = Math.min(discountAmount, cart.subtotal); // Cannot discount more than subtotal
+      
+      await db.promoCode.update({
+        where: { id: promo.id },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
+
+    const pricing = calculateCheckoutPricing(cart, { discountAmount });
     const order = await checkoutRepository.createPendingOrder({
-      userId,
+      userId: identity.userId,
+      guestEmail: dto.guestEmail,
       cart,
       address: dto.shippingAddress,
       pricing,
       provider: dto.provider,
+      promoCode,
     });
 
     try {
-      const providerPayload = await paymentService.createProviderPayment({
-        orderId: order.id,
-        provider: dto.provider,
-        amount: order.totalAmount,
-        currency: order.currency,
-      });
+      const providerPayload =
+        dto.provider === "cod"
+          ? {}
+          : await paymentService.createProviderPayment({
+              orderId: order.id,
+              provider: dto.provider,
+              amount: order.totalAmount,
+              currency: order.currency,
+            });
 
-      await cartRepository.clearUserCart(userId);
-      const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { email: true },
-      });
-      if (user) {
-        await emailService.sendOrderConfirmation({
-          to: user.email,
-          orderId: order.id,
-          totalAmount: order.totalAmount,
-        });
+      if (dto.provider === "cod") {
+        if (identity.userId) await cartRepository.clearUserCart(identity.userId);
+        else if (identity.guestId) await import("@/modules/cart/cart.repository").then(m => m.guestCartRepository.clear(identity.guestId!));
+
+        const email = identity.userId
+          ? (await db.user.findUnique({ where: { id: identity.userId }, select: { email: true } }))?.email
+          : dto.guestEmail;
+
+        if (email) {
+          await emailService.sendOrderConfirmation({
+            to: email,
+            orderId: order.id,
+            totalAmount: order.totalAmount,
+          });
+        }
+
+        await this.notifySellers(order.id).catch(console.error);
       }
 
       return {
@@ -64,11 +108,52 @@ export const checkoutService = {
         ...providerPayload,
       };
     } catch (error) {
-      await paymentService.failOrder(
-        order.id,
-        error instanceof Error ? error.message : "Payment provider initialization failed"
-      );
+      if (dto.provider !== "cod") {
+        await paymentService.failOrder(
+          order.id,
+          error instanceof Error ? error.message : "Payment provider initialization failed"
+        );
+      }
       throw error;
     }
   },
+
+  async notifySellers(orderId: string) {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                seller: {
+                  include: { user: { select: { email: true } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!order) return;
+
+    // Group items by seller to send one email per seller per order
+    const sellerEmails = new Map<string, string[]>();
+    for (const item of order.items) {
+      const email = item.product.seller?.user?.email;
+      if (email) {
+        if (!sellerEmails.has(email)) sellerEmails.set(email, []);
+        sellerEmails.get(email)!.push(item.productName);
+      }
+    }
+
+    for (const [email, productNames] of sellerEmails.entries()) {
+      await emailService.sendSellerNotification({
+        to: email,
+        orderId,
+        productName: productNames.join(", "),
+      }).catch(console.error);
+    }
+  }
 };

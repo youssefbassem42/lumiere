@@ -75,6 +75,14 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
             <h2 className="text-lg font-semibold mb-4">Totals</h2>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>${order.subtotal.toFixed(2)}</span></div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">
+                    Discount{order.promoCode ? ` (${order.promoCode})` : ""}
+                  </span>
+                  <span className="text-slate-900">-${order.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between"><span className="text-slate-500">Tax</span><span>${order.taxAmount.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">Shipping</span><span>${order.shippingFee.toFixed(2)}</span></div>
               <div className="border-t border-slate-100 pt-3 flex justify-between font-semibold text-base"><span>Total</span><span>${order.totalAmount.toFixed(2)}</span></div>

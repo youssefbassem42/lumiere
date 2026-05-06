@@ -4,7 +4,18 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function WishlistGrid({ initialItems }: { initialItems: any[] }) {
+type WishlistItem = {
+  id: string;
+  productId: string;
+  product: {
+    slug: string;
+    name: string;
+    price: number;
+    images?: Array<{ url: string; alt?: string | null }>;
+  };
+};
+
+export default function WishlistGrid({ initialItems }: { initialItems: WishlistItem[] }) {
   const [items, setItems] = useState(initialItems);
   
   const handleRemove = async (productId: string) => {

@@ -1,5 +1,6 @@
 export interface CheckoutPricing {
   subtotal: number;
+  discountAmount: number;
   taxAmount: number;
   shippingFee: number;
   totalAmount: number;
@@ -8,7 +9,7 @@ export interface CheckoutPricing {
 
 export interface CheckoutResult {
   orderId: string;
-  provider: "stripe" | "paypal";
+  provider: "stripe" | "paypal" | "cod";
   status: "pending";
   amount: number;
   currency: "usd";

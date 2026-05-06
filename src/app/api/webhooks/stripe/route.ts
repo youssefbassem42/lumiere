@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (err: any) {
-    console.error("Stripe Webhook Error:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("Stripe Webhook Error:", message);
     return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 });
   }
 }

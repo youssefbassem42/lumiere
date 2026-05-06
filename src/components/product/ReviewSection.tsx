@@ -6,11 +6,12 @@ import type { ReviewsResponseDTO } from "@/modules/reviews/review.types";
 
 interface ReviewSectionProps {
   productId: string;
+  productSlug: string;
   canReview: boolean;
   initialReviews: ReviewsResponseDTO;
 }
 
-export function ReviewSection({ productId, canReview, initialReviews }: ReviewSectionProps) {
+export function ReviewSection({ productId, productSlug, canReview, initialReviews }: ReviewSectionProps) {
   const [reviews, setReviews] = useState(initialReviews);
   const [sort, setSort] = useState<"newest" | "highest">("newest");
   const [rating, setRating] = useState(5);
@@ -20,7 +21,7 @@ export function ReviewSection({ productId, canReview, initialReviews }: ReviewSe
   const [loading, setLoading] = useState(false);
 
   async function loadReviews(nextSort = sort) {
-    const res = await fetch(`/api/products/${productId}/reviews?sort=${nextSort}`, {
+    const res = await fetch(`/api/products/${productSlug}/reviews?sort=${nextSort}`, {
       cache: "no-store",
     });
     if (res.ok) setReviews(await res.json());
@@ -134,8 +135,13 @@ export function ReviewSection({ productId, canReview, initialReviews }: ReviewSe
             <article key={review.id} className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-medium text-zinc-900">{review.user.name ?? "Verified customer"}</p>
-                  <p className="text-xs text-zinc-400">{new Date(review.createdAt).toLocaleDateString()}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-zinc-900">{review.user.name ?? "Verified customer"}</p>
+                    {review.isVerifiedPurchase && (
+                      <span className="text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded bg-green-100 text-green-700">Verified</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5">{new Date(review.createdAt).toLocaleDateString()}</p>
                 </div>
                 <StarRating rating={review.rating} size="sm" />
               </div>

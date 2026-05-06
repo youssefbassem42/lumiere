@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reviewService } from "@/modules/reviews/review.service";
+import { productService } from "@/modules/products/product.service";
 import { reviewQuerySchema } from "@/modules/reviews/review.validators";
 import { toErrorResponse } from "@/modules/shared/errors";
 
@@ -9,7 +10,7 @@ interface Props {
 
 export async function GET(request: NextRequest, { params }: Props) {
   try {
-    const { slug: productId } = await params;
+    const { slug } = await params;
     const parsed = reviewQuerySchema.safeParse(
       Object.fromEntries(request.nextUrl.searchParams.entries())
     );
@@ -21,7 +22,12 @@ export async function GET(request: NextRequest, { params }: Props) {
       );
     }
 
-    const reviews = await reviewService.listForProduct(productId, parsed.data);
+    const product = await productService.getProductBySlug(slug);
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const reviews = await reviewService.listForProduct(product.id, parsed.data);
     return NextResponse.json(reviews);
   } catch (error) {
     const response = toErrorResponse(error);

@@ -1,10 +1,37 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
+
+let cachedWishlistIds: Set<string> | null = null;
+let wishlistFetchPromise: Promise<Set<string>> | null = null;
+
+async function fetchWishlistIds(): Promise<Set<string>> {
+  if (cachedWishlistIds) return cachedWishlistIds;
+  if (wishlistFetchPromise) return wishlistFetchPromise;
+
+  wishlistFetchPromise = fetch("/api/wishlist", { cache: "no-store" })
+    .then(async (res) => {
+      if (!res.ok) return new Set<string>();
+      const data = (await res.json().catch(() => null)) as { productIds?: string[] } | null;
+      return new Set<string>(data?.productIds ?? []);
+    })
+    .catch(() => new Set<string>());
+
+  const ids = await wishlistFetchPromise;
+  cachedWishlistIds = ids;
+  wishlistFetchPromise = null;
+  return ids;
+}
+
+function updateWishlistCache(productId: string, inWishlist: boolean) {
+  if (!cachedWishlistIds) return;
+  if (inWishlist) cachedWishlistIds.add(productId);
+  else cachedWishlistIds.delete(productId);
+}
 
 interface WishlistButtonProps {
   productId: string;
-  initialInWishlist: boolean;
+  initialInWishlist?: boolean;
   className?: string;
 }
 
@@ -12,16 +39,15 @@ export function WishlistButton({ productId, initialInWishlist = false, className
   const [inWishlist, setInWishlist] = useState(initialInWishlist);
   const [isPending, startTransition] = useTransition();
 
-  // Optionally fetch initial state if not provided
   useEffect(() => {
-    if (initialInWishlist === undefined) {
-      fetch("/api/wishlist").then(res => res.json()).then(data => {
-        if (data && data.items) {
-          setInWishlist(data.items.some((item: any) => item.productId === productId));
-        }
-      });
-    }
-  }, [productId, initialInWishlist]);
+    let cancelled = false;
+    fetchWishlistIds().then((ids) => {
+      if (!cancelled) setInWishlist(ids.has(productId));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -29,7 +55,9 @@ export function WishlistButton({ productId, initialInWishlist = false, className
 
     // Optimistic UI update
     const previousState = inWishlist;
-    setInWishlist(!previousState);
+    const nextState = !previousState;
+    setInWishlist(nextState);
+    updateWishlistCache(productId, nextState);
 
     startTransition(async () => {
       try {
@@ -42,9 +70,11 @@ export function WishlistButton({ productId, initialInWishlist = false, className
         if (!response.ok) {
           // Revert on failure
           setInWishlist(previousState);
+          updateWishlistCache(productId, previousState);
         }
-      } catch (error) {
+      } catch {
         setInWishlist(previousState);
+        updateWishlistCache(productId, previousState);
       }
     });
   };

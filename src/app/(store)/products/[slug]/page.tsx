@@ -31,9 +31,10 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await productService.getProductBySlug(slug);
   if (!product) notFound();
   const session = await getServerSession(authOptions);
-  const [canReview, reviews] = await Promise.all([
+  const [canReview, reviews, inWishlist] = await Promise.all([
     reviewService.canReview(session?.user?.id, product.id),
     reviewService.listForProduct(product.id, { sort: "newest", page: 1, limit: 10 }),
+    import("@/modules/wishlist/wishlist.service").then(m => m.wishlistService.isInWishlist(session?.user?.id, product.id)),
   ]);
 
   const isInStock = product.stock > 0;
@@ -166,7 +167,7 @@ export default async function ProductDetailPage({ params }: Props) {
             <AddToCartButton productId={product.id} disabled={!isInStock} />
             <WishlistButton 
               productId={product.id} 
-              initialInWishlist={false} // Will be updated by client side fetch
+              initialInWishlist={inWishlist}
               className="btn btn-secondary btn-lg flex items-center justify-center gap-2"
             />
           </div>
@@ -187,7 +188,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
-      <ReviewSection productId={product.id} canReview={canReview} initialReviews={reviews} />
+      <ReviewSection productId={product.id} productSlug={product.slug} canReview={canReview} initialReviews={reviews} />
     </div>
   );
 }

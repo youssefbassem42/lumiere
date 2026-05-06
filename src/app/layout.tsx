@@ -21,6 +21,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+          rel="stylesheet"
+        />
+      </head>
       <body className="flex flex-col min-h-screen antialiased bg-[#FAF8FF] text-slate-900">
         <Providers>
           <Navbar />

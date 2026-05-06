@@ -43,7 +43,6 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Favorite Button (Hidden until hover) */}
         <WishlistButton 
           productId={product.id}
-          initialInWishlist={false} // Would ideally come from initial fetch if we want SRR
         />
 
         {/* Badges Overlay */}

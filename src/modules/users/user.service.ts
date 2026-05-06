@@ -26,34 +26,12 @@ export const userService = {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError("User not found", 404, "NOT_FOUND");
 
-    // Address handling (simplified to save phone in first address or create one)
-    if (data.phone) {
-      const address = await db.address.findFirst({ where: { userId, isDefault: true } });
-      if (address) {
-        await db.address.update({
-          where: { id: address.id },
-          data: { phone: data.phone },
-        });
-      } else {
-        await db.address.create({
-          data: {
-            userId,
-            phone: data.phone,
-            fullName: data.name || user.name || "",
-            city: "",
-            country: "",
-            street: "",
-            isDefault: true,
-          },
-        });
-      }
-    }
-
     return db.user.update({
       where: { id: userId },
       data: {
         name: data.name,
         email: data.email,
+        phone: data.phone,
       },
     });
   },
@@ -79,11 +57,11 @@ export const userService = {
   },
 
   async getUser(userId: string) {
+    if (!userId) return null;
     const user = await db.user.findUnique({
       where: { id: userId },
       include: { addresses: true },
     });
-    if (!user) throw new AppError("User not found", 404, "NOT_FOUND");
     return user;
   }
 };

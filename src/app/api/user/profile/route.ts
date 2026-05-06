@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const user = await userService.getUser(session.user.id);
+    if (!user) throw new AppError("User not found", 404, "NOT_FOUND");
+
     // don't leak password
-    const { password, ...safeUser } = user;
+    const { password, ...safeUser } = user as any;
     return NextResponse.json(safeUser);
   } catch (error) {
     const { body, status } = toErrorResponse(error);

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role, DiscountType, OrderStatus } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -13,187 +13,256 @@ function slug(name: string) {
 
 // ── Seed Data ────────────────────────────────────────────────────────────────
 async function main() {
-  console.log("🌱 Seeding database...\n");
+  console.log("🌱 Seeding database with high-quality data...\n");
 
-  // ── 1. Users ───────────────────────────────────────────────────────────────
+  // 1. Clean existing data (optional but helpful for a fresh start)
+  // Note: Be careful with deletions in production!
+  await prisma.wishlistItem.deleteMany();
+  await prisma.reviewReply.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.promoCode.deleteMany();
+  await prisma.productImage.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.sellerProfile.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.user.deleteMany({ where: { role: { not: "ADMIN" } } }); // Keep admin if exists
+
   const hashedPassword = await bcrypt.hash("Password123", 12);
 
+  // ── 1. Users ───────────────────────────────────────────────────────────────
   const admin = await prisma.user.upsert({
     where: { email: "admin@lumiere.store" },
     update: {},
     create: {
-      name: "Admin User",
+      name: "Alexander Lumière",
       email: "admin@lumiere.store",
       password: hashedPassword,
       role: "ADMIN",
+      emailVerified: new Date(),
     },
   });
 
-  const user1 = await prisma.user.upsert({
-    where: { email: "jane@example.com" },
-    update: {},
-    create: {
-      name: "Jane Doe",
-      email: "jane@example.com",
+  const seller1User = await prisma.user.create({
+    data: {
+      name: "Julian Vane",
+      email: "julian@vane-atelier.com",
+      password: hashedPassword,
+      role: "SELLER",
+      emailVerified: new Date(),
+    },
+  });
+
+  const seller2User = await prisma.user.create({
+    data: {
+      name: "Elena Rossi",
+      email: "elena@rossi-home.it",
+      password: hashedPassword,
+      role: "SELLER",
+      emailVerified: new Date(),
+    },
+  });
+
+  const customer1 = await prisma.user.create({
+    data: {
+      name: "Marcus Aurelius",
+      email: "marcus@example.com",
       password: hashedPassword,
       role: "USER",
+      emailVerified: new Date(),
     },
   });
 
-  const user2 = await prisma.user.upsert({
-    where: { email: "john@example.com" },
-    update: {},
-    create: {
-      name: "John Smith",
-      email: "john@example.com",
-      password: hashedPassword,
-      role: "USER",
+  console.log("✅ Users and Roles created.");
+
+  // ── 2. Seller Profiles ────────────────────────────────────────────────────
+  const seller1 = await prisma.sellerProfile.create({
+    data: {
+      userId: seller1User.id,
+      shopName: "Vane Atelier",
+      description: "Handcrafted minimalist fashion and essentials for the modern wanderer.",
+      isApproved: true,
     },
   });
 
-  console.log(`✅ Users: ${admin.name}, ${user1.name}, ${user2.name}`);
+  const seller2 = await prisma.sellerProfile.create({
+    data: {
+      userId: seller2User.id,
+      shopName: "Rossi Casa",
+      description: "Fine Italian homeware and curated living room essentials.",
+      isApproved: true,
+    },
+  });
 
-  // ── 2. Categories ─────────────────────────────────────────────────────────
-  const categoriesData = [
+  console.log("✅ Seller Profiles created.");
+
+  // ── 3. Categories ─────────────────────────────────────────────────────────
+  const categories = [
     {
-      name: "Electronics",
-      description: "Latest gadgets and tech accessories",
-      image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600",
-      children: [
-        { name: "Smartphones", description: "Flagship and budget phones" },
-        { name: "Laptops", description: "Notebooks and ultrabooks" },
-        { name: "Audio", description: "Headphones, speakers and more" },
-      ],
+      name: "Living",
+      description: "Objects for intentional living and home sanctuary.",
+      image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7",
+      sub: ["Furniture", "Lighting", "Decor"]
     },
     {
-      name: "Fashion",
-      description: "Curated luxury fashion pieces",
-      image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=600",
-      children: [
-        { name: "Men's Wear", description: "Menswear essentials" },
-        { name: "Women's Wear", description: "Womenswear collection" },
-        { name: "Accessories", description: "Bags, belts and jewelry" },
-      ],
+      name: "Tech",
+      description: "Premium gadgets that blend form and function.",
+      image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+      sub: ["Audio", "Desk Essentials", "Mobile"]
     },
     {
-      name: "Home & Living",
-      description: "Elevate your living space",
-      image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600",
-      children: [
-        { name: "Furniture", description: "Modern furniture pieces" },
-        { name: "Decor", description: "Home decoration items" },
-      ],
+      name: "Apparel",
+      description: "Timeless garments crafted from natural materials.",
+      image: "https://images.unsplash.com/photo-1490481651871-ab68ff25d43d",
+      sub: ["Menswear", "Womenswear", "Accessories"]
     },
     {
       name: "Beauty",
-      description: "Premium skincare and cosmetics",
-      image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600",
-      children: [
-        { name: "Skincare", description: "Serums, creams and treatments" },
-        { name: "Fragrance", description: "Luxury perfumes and colognes" },
-      ],
-    },
+      description: "Scientific skincare and evocative fragrances.",
+      image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571",
+      sub: ["Skincare", "Scent"]
+    }
   ];
 
   const categoryMap: Record<string, string> = {};
 
-  for (const cat of categoriesData) {
-    const parent = await prisma.category.upsert({
-      where: { slug: slug(cat.name) },
-      update: {},
-      create: {
+  for (const cat of categories) {
+    const parent = await prisma.category.create({
+      data: {
         name: cat.name,
         slug: slug(cat.name),
         description: cat.description,
         image: cat.image,
-      },
+      }
     });
     categoryMap[cat.name] = parent.id;
 
-    for (const child of cat.children) {
-      const sub = await prisma.category.upsert({
-        where: { slug: slug(child.name) },
-        update: {},
-        create: {
-          name: child.name,
-          slug: slug(child.name),
-          description: child.description,
+    for (const subName of cat.sub) {
+      const sub = await prisma.category.create({
+        data: {
+          name: subName,
+          slug: slug(subName),
           parentId: parent.id,
-        },
+        }
       });
-      categoryMap[child.name] = sub.id;
+      categoryMap[subName] = sub.id;
     }
   }
 
-  console.log(`✅ Categories: ${Object.keys(categoryMap).length} created`);
+  console.log("✅ Categories hierarchy created.");
 
-  // ── 3. Products ───────────────────────────────────────────────────────────
-  const productsData = [
-    // Electronics > Smartphones
-    { name: "Galaxy Ultra S26", description: "Samsung's flagship with 200MP camera, titanium frame, and AI-powered features. The ultimate smartphone experience.", price: 1199.99, comparePrice: 1399.99, stock: 45, sku: "SM-S26U", category: "Smartphones", featured: true, images: ["https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600"] },
-    { name: "iPhone 17 Pro", description: "Apple's most advanced iPhone ever. A18 Bionic chip, ProMotion display, and revolutionary camera system.", price: 1099.00, comparePrice: null, stock: 120, sku: "APL-IP17P", category: "Smartphones", featured: true, images: ["https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=600"] },
-    { name: "Pixel 10 Pro", description: "Google's AI-first smartphone with Tensor G5 chip. Best-in-class computational photography.", price: 899.00, comparePrice: 999.00, stock: 30, sku: "GGL-PX10P", category: "Smartphones", featured: false, images: ["https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600"] },
+  // ── 4. Products ───────────────────────────────────────────────────────────
+  const products = [
+    // --- Living ---
+    {
+      name: "Hans J. Wegner Lounge Chair",
+      desc: "An iconic piece of Danish modern design. Solid oak frame with hand-woven paper cord seat. Timeless comfort for your reading nook.",
+      price: 1250, compare: 1400, stock: 5, sku: "LIV-WGN-01", 
+      cat: "Furniture", seller: seller2.id, featured: true,
+      images: ["https://images.unsplash.com/photo-1567538096630-e0c55bd6374c"]
+    },
+    {
+      name: "Brass Floating Pendant",
+      desc: "Hand-finished spun brass pendant lamp. Emits a soft, warm glow that elevates any dining or living space.",
+      price: 480, compare: null, stock: 12, sku: "LIV-LIT-02", 
+      cat: "Lighting", seller: seller2.id, featured: false,
+      images: ["https://images.unsplash.com/photo-1534073828943-f801091bb18c"]
+    },
+    {
+      name: "Ceramic Ripple Vase",
+      desc: "Matte white ceramic vase with a unique ripple texture. Perfect as a standalone sculpture or for minimal floral arrangements.",
+      price: 85, compare: 110, stock: 45, sku: "LIV-DEC-03", 
+      cat: "Decor", seller: seller2.id, featured: true,
+      images: ["https://images.unsplash.com/photo-1581783898377-1c85bf937427"]
+    },
 
-    // Electronics > Laptops
-    { name: "MacBook Pro M4 16\"", description: "Supercharged by M4 Pro chip. Up to 22 hours battery life. Liquid Retina XDR display.", price: 2499.00, comparePrice: null, stock: 25, sku: "APL-MBP16", category: "Laptops", featured: true, images: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600", "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=600"] },
-    { name: "ThinkPad X1 Carbon Gen 12", description: "Ultra-lightweight business laptop. 14\" 2.8K OLED display, Intel Core Ultra processor.", price: 1849.00, comparePrice: 2099.00, stock: 18, sku: "LNV-X1C12", category: "Laptops", featured: false, images: ["https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600"] },
-    { name: "Dell XPS 15", description: "InfinityEdge display with stunning 3.5K OLED panel. Perfect for creators and professionals.", price: 1599.00, comparePrice: null, stock: 35, sku: "DLL-XPS15", category: "Laptops", featured: false, images: ["https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=600"] },
+    // --- Tech ---
+    {
+      name: "Silver Walnut Headphones",
+      desc: "Reference-grade studio headphones. Real walnut earcups, sheepskin leather headband, and 45mm neodymium drivers.",
+      price: 399, compare: 450, stock: 25, sku: "TCH-AUD-01", 
+      cat: "Audio", seller: null, featured: true,
+      images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e"]
+    },
+    {
+      name: "Anodized Aluminum Keyboard",
+      desc: "Mechanical precision in a minimalist package. Hot-swappable switches, Gateron browns, and a solid aluminum case.",
+      price: 180, compare: null, stock: 30, sku: "TCH-DSK-02", 
+      cat: "Desk Essentials", seller: null, featured: false,
+      images: ["https://images.unsplash.com/photo-1511467687858-23d96c32e4ae"]
+    },
+    {
+      name: "Titanium Laptop Stand",
+      desc: "Elevate your workflow. Precision-milled titanium stand for optimal ergonomics and thermal performance.",
+      price: 145, compare: 175, stock: 15, sku: "TCH-DSK-03", 
+      cat: "Desk Essentials", seller: null, featured: true,
+      images: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf"]
+    },
 
-    // Electronics > Audio
-    { name: "Sony WH-1000XM6", description: "Industry-leading noise cancellation with 40-hour battery life. Hi-Res Audio and LDAC support.", price: 399.99, comparePrice: 449.99, stock: 80, sku: "SNY-XM6", category: "Audio", featured: true, images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"] },
-    { name: "AirPods Pro 3", description: "Adaptive Audio. Personalized Spatial Audio. USB-C MagSafe case with built-in speaker.", price: 249.00, comparePrice: null, stock: 200, sku: "APL-APP3", category: "Audio", featured: false, images: ["https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600"] },
+    // --- Apparel ---
+    {
+      name: "Raw Denim Work Jacket",
+      desc: "14oz Japanese selvedge denim. Triple-stitched seams and solid brass buttons. Designed to age beautifully with every wear.",
+      price: 240, compare: 290, stock: 10, sku: "APP-MWR-01", 
+      cat: "Menswear", seller: seller1.id, featured: true,
+      images: ["https://images.unsplash.com/photo-1591047139829-d91aecb6caea"]
+    },
+    {
+      name: "Merino Wool Turtle Neck",
+      desc: "Extra fine merino wool from sustainable sources. Breathable, soft, and exceptionally warm for the cooler months.",
+      price: 135, compare: null, stock: 40, sku: "APP-WWR-02", 
+      cat: "Womenswear", seller: seller1.id, featured: false,
+      images: ["https://images.unsplash.com/photo-1434389677669-e08b4cac3105"]
+    },
+    {
+      name: "Minimalist Leather Cardholder",
+      desc: "Full-grain vegetable tanned leather. 4 card slots and a central pocket. Slim profile that disappears in your pocket.",
+      price: 55, compare: 75, stock: 100, sku: "APP-ACC-03", 
+      cat: "Accessories", seller: seller1.id, featured: false,
+      images: ["https://images.unsplash.com/photo-1627123424574-724758594e93"]
+    },
 
-    // Fashion > Men's Wear
-    { name: "Cashmere Overcoat", description: "Premium Italian cashmere overcoat. Tailored fit with satin lining. Available in charcoal and navy.", price: 890.00, comparePrice: 1200.00, stock: 12, sku: "FSH-COC01", category: "Men's Wear", featured: true, images: ["https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=600"] },
-    { name: "Slim Fit Chinos", description: "Stretch cotton chinos with a modern slim fit. Comfortable all-day wear.", price: 79.99, comparePrice: null, stock: 150, sku: "FSH-CHN01", category: "Men's Wear", featured: false, images: ["https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600"] },
-    { name: "Oxford Dress Shirt", description: "Classic button-down Oxford shirt in premium Egyptian cotton. Wrinkle-resistant finish.", price: 59.99, comparePrice: 89.99, stock: 200, sku: "FSH-OXF01", category: "Men's Wear", featured: false, images: ["https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600"] },
-
-    // Fashion > Women's Wear
-    { name: "Silk Midi Dress", description: "Elegant silk midi dress with delicate draping. Perfect for evening occasions.", price: 450.00, comparePrice: 599.00, stock: 20, sku: "FSH-SMD01", category: "Women's Wear", featured: true, images: ["https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600"] },
-    { name: "Leather Biker Jacket", description: "Genuine lambskin leather jacket with silver-tone hardware. Timeless rebel style.", price: 650.00, comparePrice: null, stock: 15, sku: "FSH-LBJ01", category: "Women's Wear", featured: false, images: ["https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600"] },
-
-    // Fashion > Accessories
-    { name: "Italian Leather Tote", description: "Handcrafted full-grain Italian leather tote bag. Spacious interior with laptop sleeve.", price: 320.00, comparePrice: 420.00, stock: 30, sku: "FSH-ILT01", category: "Accessories", featured: true, images: ["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600"] },
-    { name: "Minimalist Watch", description: "Swiss-made quartz movement. Sapphire crystal glass. 40mm case with leather strap.", price: 275.00, comparePrice: null, stock: 40, sku: "FSH-MNW01", category: "Accessories", featured: false, images: ["https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600"] },
-
-    // Home & Living > Furniture
-    { name: "Scandinavian Lounge Chair", description: "Mid-century modern design with solid oak frame and premium wool upholstery.", price: 799.00, comparePrice: 999.00, stock: 10, sku: "HM-SLC01", category: "Furniture", featured: true, images: ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600"] },
-    { name: "Walnut Coffee Table", description: "Solid walnut coffee table with hairpin legs. Minimalist design for modern living rooms.", price: 349.00, comparePrice: null, stock: 22, sku: "HM-WCT01", category: "Furniture", featured: false, images: ["https://images.unsplash.com/photo-1532372320572-cda25653a26d?w=600"] },
-
-    // Home & Living > Decor
-    { name: "Ceramic Vase Set", description: "Set of 3 handmade ceramic vases in earthy tones. Each piece is unique.", price: 89.99, comparePrice: 129.99, stock: 60, sku: "HM-CVS01", category: "Decor", featured: false, images: ["https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=600"] },
-    { name: "Linen Throw Blanket", description: "100% French linen throw blanket. Naturally breathable and gets softer with every wash.", price: 120.00, comparePrice: null, stock: 45, sku: "HM-LTB01", category: "Decor", featured: false, images: ["https://images.unsplash.com/photo-1616627561950-9f746e330187?w=600"] },
-
-    // Beauty > Skincare
-    { name: "Hyaluronic Acid Serum", description: "Triple-weight hyaluronic acid serum for deep hydration. Dermatologist recommended.", price: 42.00, comparePrice: 58.00, stock: 300, sku: "BTY-HAS01", category: "Skincare", featured: true, images: ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600"] },
-    { name: "Vitamin C Moisturizer", description: "Brightening moisturizer with 15% vitamin C complex. SPF 30 protection included.", price: 38.00, comparePrice: null, stock: 180, sku: "BTY-VCM01", category: "Skincare", featured: false, images: ["https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600"] },
-
-    // Beauty > Fragrance
-    { name: "Oud Noir Eau de Parfum", description: "Luxury fragrance with notes of oud wood, saffron, and amber. Long-lasting 12+ hours.", price: 185.00, comparePrice: 220.00, stock: 50, sku: "BTY-ONP01", category: "Fragrance", featured: true, images: ["https://images.unsplash.com/photo-1541643600914-78b084683601?w=600"] },
-    { name: "Fresh Citrus Cologne", description: "Light and refreshing cologne with bergamot, lemon, and white musk. Perfect for daily wear.", price: 65.00, comparePrice: null, stock: 100, sku: "BTY-FCC01", category: "Fragrance", featured: false, images: ["https://images.unsplash.com/photo-1594035910387-fea081e42953?w=600"] },
+    // --- Beauty ---
+    {
+      name: "Botanic Face Oil",
+      desc: "A potent blend of cold-pressed botanicals. Rich in antioxidants and essential fatty acids for a luminous complexion.",
+      price: 72, compare: 95, stock: 60, sku: "BTY-SKN-01", 
+      cat: "Skincare", seller: null, featured: true,
+      images: ["https://images.unsplash.com/photo-1608248597279-f99d160bfcbc"]
+    },
+    {
+      name: "Santal 33 Eau de Parfum",
+      desc: "An addictive blend of cardamon, iris, violet, and ambrox. A signature scent that defines modern luxury.",
+      price: 215, compare: null, stock: 20, sku: "BTY-SNT-02", 
+      cat: "Scent", seller: null, featured: true,
+      images: ["https://images.unsplash.com/photo-1541643600914-78b084683601"]
+    }
   ];
 
   const productIds: string[] = [];
 
-  for (const p of productsData) {
-    const product = await prisma.product.upsert({
-      where: { slug: slug(p.name) },
-      update: {},
-      create: {
+  for (const p of products) {
+    const product = await prisma.product.create({
+      data: {
         name: p.name,
         slug: slug(p.name),
-        description: p.description,
+        description: p.desc,
         price: p.price,
-        comparePrice: p.comparePrice,
+        comparePrice: p.compare,
         stock: p.stock,
         sku: p.sku,
         isFeatured: p.featured,
-        isPublished: true,
-        categoryId: categoryMap[p.category],
+        categoryId: categoryMap[p.cat],
+        sellerId: p.seller,
         images: {
           create: p.images.map((url, i) => ({
             url,
-            alt: `${p.name} - Image ${i + 1}`,
+            alt: `${p.name} - Perspective ${i + 1}`,
           })),
         },
       },
@@ -201,60 +270,71 @@ async function main() {
     productIds.push(product.id);
   }
 
-  console.log(`✅ Products: ${productIds.length} created`);
+  console.log(`✅ Products: ${productIds.length} created.`);
 
-  // ── 4. Reviews ────────────────────────────────────────────────────────────
-  const reviewers = [user1.id, user2.id];
-  const reviewComments = [
-    "Absolutely love this product! Exceeded my expectations.",
-    "Great quality for the price. Would definitely recommend.",
-    "Good product overall. Shipping was fast.",
-    "Decent quality. Not the best but solid for the price.",
-    "Amazing! This is exactly what I was looking for.",
-    "Very satisfied with my purchase. Will buy again.",
-  ];
+  // ── 5. Promo Codes ────────────────────────────────────────────────────────
+  await prisma.promoCode.createMany({
+    data: [
+      { code: "LUMIERE10", discountType: "PERCENTAGE", discountValue: 10, isActive: true },
+      { code: "WELCOME50", discountType: "FIXED", discountValue: 50, isActive: true },
+      { code: "EXPIRED20", discountType: "PERCENTAGE", discountValue: 20, isActive: false, expiryDate: new Date(Date.now() - 86400000) },
+    ],
+  });
 
-  let reviewCount = 0;
-  for (let i = 0; i < productIds.length; i++) {
-    // Each product gets 1-2 reviews
-    const numReviews = Math.min(reviewers.length, (i % 2) + 1);
-    for (let j = 0; j < numReviews; j++) {
-      const existing = await prisma.review.findUnique({
-        where: { userId_productId: { userId: reviewers[j], productId: productIds[i] } },
+  console.log("✅ Promo Codes created.");
+
+  // ── 6. Orders & Reviews ───────────────────────────────────────────────────
+  // Create some realistic orders and reviews
+  for (let i = 0; i < 5; i++) {
+    const order = await prisma.order.create({
+      data: {
+        userId: customer1.id,
+        subtotal: 100 + (i * 50),
+        totalAmount: 100 + (i * 50),
+        status: i === 0 ? "DELIVERED" : "PAID",
+        currency: "usd",
+        items: {
+          create: [
+            { 
+              productId: productIds[i % productIds.length], 
+              quantity: 1, 
+              price: 100 + (i * 50), 
+              productName: products[i % products.length].name,
+              productSlug: slug(products[i % products.length].name)
+            },
+          ],
+        },
+        payment: {
+          create: { 
+            amount: 100 + (i * 50), 
+            provider: "STRIPE", 
+            status: "SUCCESS" 
+          }
+        }
+      },
+    });
+
+    if (i % 2 === 0) {
+      await prisma.review.create({
+        data: {
+          rating: 5,
+          comment: "Absolutely breathtaking quality. The minimalist design is exactly what I was looking for. Fast shipping too!",
+          userId: customer1.id,
+          productId: productIds[i % productIds.length],
+          isVerifiedPurchase: true,
+        },
       });
-      if (!existing) {
-        await prisma.review.create({
-          data: {
-            rating: 3 + Math.floor(Math.random() * 3), // 3-5
-            comment: reviewComments[(i + j) % reviewComments.length],
-            userId: reviewers[j],
-            productId: productIds[i],
-          },
-        });
-        reviewCount++;
-      }
     }
   }
 
-  console.log(`✅ Reviews: ${reviewCount} created`);
+  console.log("✅ Orders and Verified Reviews created.");
 
-  // ── 5. Sample Cart ────────────────────────────────────────────────────────
-  const cart = await prisma.cart.upsert({
-    where: { userId: user1.id },
-    update: {},
-    create: {
-      userId: user1.id,
-      items: {
-        create: [
-          { productId: productIds[0], quantity: 1 },
-          { productId: productIds[6], quantity: 2 },
-        ],
-      },
-    },
-  });
-  console.log(`✅ Cart: created for ${user1.name} (${cart.id})`);
-
-  console.log("\n🎉 Seed completed successfully!");
+  console.log("\n🎉 Database Seeded Successfully!");
+  console.log("----------------------------------");
+  console.log(`Admin: admin@lumiere.store / Password123`);
+  console.log(`Seller: julian@vane-atelier.com / Password123`);
+  console.log(`Customer: marcus@example.com / Password123`);
+  console.log("----------------------------------");
 }
 
 main()
