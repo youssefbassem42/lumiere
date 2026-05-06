@@ -109,12 +109,12 @@ Visit [http://localhost:3000](http://localhost:3000) to see your application!
 ### Vercel Configuration
 This project is optimized for Vercel. Ensure the following environment variables are set in your Vercel project dashboard:
 
-- `DATABASE_URL`: Your pooled database connection string.
-- `DIRECT_URL`: Your direct database connection string (for migrations).
+- `DATABASE_URL`: Your database connection string (use pooled URL for runtime).
+- `DIRECT_URL`: Your direct connection string (required for migrations via CLI).
 - `NEXTAUTH_SECRET`: A secure random string for NextAuth.
-- `NEXTAUTH_URL`: Your production URL (e.g., `https://lumiere.vercel.app`).
+- `NEXTAUTH_URL`: Your production URL.
 - `NEXT_PUBLIC_APP_URL`: Same as `NEXTAUTH_URL`.
-- `REDIS_URL`: URL for your production Redis (e.g., Upstash).
+- `REDIS_URL`: URL for your production Redis.
 
 ### Build & Deploy
 The `vercel.json` file handles the build configuration. The `postinstall` script in `package.json` ensures the Prisma client is generated on every deployment.
