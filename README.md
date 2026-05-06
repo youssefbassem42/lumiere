@@ -29,6 +29,28 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Deployment
+
+### Vercel Configuration
+This project is optimized for Vercel. Ensure the following environment variables are set in your Vercel project dashboard:
+
+- `DATABASE_URL`: Your pooled database connection string (e.g., Neon pooled URL).
+- `DIRECT_URL`: Your direct database connection string (for migrations).
+- `NEXTAUTH_SECRET`: A secure random string for NextAuth.
+- `NEXTAUTH_URL`: Your production URL (e.g., `https://lumiere.vercel.app`).
+- `NEXT_PUBLIC_APP_URL`: Same as `NEXTAUTH_URL`.
+- `JWT_SECRET`: Secret for JWT signing.
+- `REDIS_URL`: URL for your production Redis (e.g., Upstash).
+
+### Database Migrations
+The project uses Prisma. Migrations are handled automatically during the build process if configured in Vercel, or you can run:
+```bash
+npx prisma migrate deploy
+```
+
+### Build & Deploy
+The `vercel.json` file handles the build configuration. The `postinstall` script in `package.json` ensures the Prisma client is generated on every deployment.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
