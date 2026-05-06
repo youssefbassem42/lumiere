@@ -1,58 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lumière — Premium E-Commerce Platform
 
-## Getting Started
+Lumière is a state-of-the-art, feature-rich e-commerce platform built with the latest technologies. It offers a seamless experience for customers, sellers, and administrators, featuring robust product management, secure checkout, and comprehensive dashboards.
 
-First, run the development server:
+## 🚀 Technologies
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Lumière leverages a modern tech stack designed for performance, scalability, and developer experience:
+
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router, Server Components)
+- **Database**: [PostgreSQL](https://www.postgresql.org/) (Hosted on [Neon](https://neon.tech/))
+- **ORM**: [Prisma 7+](https://www.prisma.io/)
+- **Authentication**: [NextAuth.js](https://next-auth.js.org/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **Caching**: [Redis](https://redis.io/) (via [ioredis](https://github.com/luin/ioredis))
+- **Payments**: [Stripe](https://stripe.com/) & [PayPal](https://www.paypal.com/)
+- **Validation**: [Zod](https://zod.dev/)
+- **Email**: [Brevo](https://www.brevo.com/) (formerly Sendinblue)
+- **Deployment**: [Vercel](https://vercel.com/)
+
+---
+
+## 📂 Project Structure
+
+The project follows a modular, domain-driven architecture to maintain clean separation of concerns:
+
+```text
+lumiere/
+├── prisma/                  # Database schema, migrations, and seed scripts
+├── public/                  # Static assets (images, icons, etc.)
+├── src/
+│   ├── app/                 # Next.js App Router (Routes, Layouts, API)
+│   ├── components/          # Reusable UI components
+│   │   ├── admin/           # Admin-specific components
+│   │   ├── seller/          # Seller-specific components
+│   │   ├── ui/              # Base UI components (Buttons, Inputs, etc.)
+│   │   └── product/         # Product-related components
+│   ├── lib/                 # Core utilities (DB, Redis, Auth config)
+│   ├── modules/             # Domain-driven logic (Services & Repositories)
+│   │   ├── admin/           # Admin dashboard logic
+│   │   ├── auth/            # Authentication & Authorization
+│   │   ├── cart/            # Shopping cart management
+│   │   ├── checkout/        # Payment & Order processing
+│   │   ├── products/        # Product & Category management
+│   │   └── seller/          # Seller dashboard logic
+│   ├── services/            # Third-party services (Email, etc.)
+│   ├── store/               # Global state (Zustand)
+│   ├── types/               # Global TypeScript definitions
+│   └── utils/               # Helper functions
+├── .env.example             # Template for environment variables
+├── next.config.ts           # Next.js configuration
+├── package.json             # Dependencies and scripts
+└── vercel.json              # Vercel deployment configuration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Installation & Local Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Follow these steps to get Lumière running on your local machine:
 
-## Learn More
+### 1. Prerequisites
+Ensure you have the following installed:
+- [Node.js 20+](https://nodejs.org/)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- A running PostgreSQL database (or use Neon.tech)
+- A Redis instance (local or hosted)
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Clone the Repository
+```bash
+git clone https://github.com/youssefbassem42/lumiere.git
+cd lumiere
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Install Dependencies
+```bash
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Environment Configuration
+Copy the `.env.example` file to `.env` and fill in your credentials:
+```bash
+cp .env.example .env
+```
+> [!IMPORTANT]
+> Make sure to set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `REDIS_URL` at a minimum for the app to start.
 
-## Deployment
+### 5. Database Setup
+Generate the Prisma client and run migrations:
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+*(Optional)* Seed the database with sample data:
+```bash
+npm run db:seed
+```
+
+### 6. Run the Development Server
+```bash
+npm run dev
+```
+Visit [http://localhost:3000](http://localhost:3000) to see your application!
+
+---
+
+## 🚢 Deployment
 
 ### Vercel Configuration
 This project is optimized for Vercel. Ensure the following environment variables are set in your Vercel project dashboard:
 
-- `DATABASE_URL`: Your pooled database connection string (e.g., Neon pooled URL).
+- `DATABASE_URL`: Your pooled database connection string.
 - `DIRECT_URL`: Your direct database connection string (for migrations).
 - `NEXTAUTH_SECRET`: A secure random string for NextAuth.
 - `NEXTAUTH_URL`: Your production URL (e.g., `https://lumiere.vercel.app`).
 - `NEXT_PUBLIC_APP_URL`: Same as `NEXTAUTH_URL`.
-- `JWT_SECRET`: Secret for JWT signing.
 - `REDIS_URL`: URL for your production Redis (e.g., Upstash).
-
-### Database Migrations
-The project uses Prisma. Migrations are handled automatically during the build process if configured in Vercel, or you can run:
-```bash
-npx prisma migrate deploy
-```
 
 ### Build & Deploy
 The `vercel.json` file handles the build configuration. The `postinstall` script in `package.json` ensures the Prisma client is generated on every deployment.
 
-## Deploy on Vercel
+```bash
+# Manual build check
+npm run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📜 License
+This project is private and for internal use only.
