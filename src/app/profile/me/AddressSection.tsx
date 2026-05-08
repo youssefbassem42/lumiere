@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 type Address = {
   id: string;
@@ -40,12 +41,16 @@ export default function AddressSection({ initialAddresses }: { initialAddresses:
       const updated = await res.json();
       if (method === "POST") {
         setAddresses([updated, ...addresses]);
+        toast.success("Address added successfully");
       } else {
         setAddresses(addresses.map(a => a.id === updated.id ? updated : a));
+        toast.success("Address updated successfully");
       }
       setIsEditing(false);
       setEditingAddress(null);
       router.refresh();
+    } else {
+      toast.error("Failed to save address");
     }
     setLoading(false);
   }
@@ -55,7 +60,10 @@ export default function AddressSection({ initialAddresses }: { initialAddresses:
     const res = await fetch(`/api/user/addresses/${id}`, { method: "DELETE" });
     if (res.ok) {
       setAddresses(addresses.filter(a => a.id !== id));
+      toast.success("Address deleted");
       router.refresh();
+    } else {
+      toast.error("Failed to delete address");
     }
   }
 

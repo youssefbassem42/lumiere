@@ -15,6 +15,8 @@ export interface RegisterDTO {
   password: string;
   birthDate: Date;
   gender: "MALE" | "FEMALE";
+  role?: Role;
+  shopName?: string;
 }
 
 export interface LoginDTO {

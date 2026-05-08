@@ -3,14 +3,13 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const rules = [
@@ -23,8 +22,6 @@ function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
-    setError(null);
 
     try {
       const res = await fetch("/api/auth/reset-password", {
@@ -34,14 +31,14 @@ function ResetPasswordForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Unable to reset password.");
+        toast.error(data.error ?? "Unable to reset password.");
         return;
       }
-      setMessage(data.message);
+      toast.success(data.message ?? "Password reset successful!");
       setPassword("");
       setConfirmPassword("");
     } catch {
-      setError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -50,8 +47,6 @@ function ResetPasswordForm() {
   return (
     <>
       {!token && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">Missing reset token.</div>}
-      {message && <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{message}</div>}
-      {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="reset-password" className="block text-sm font-medium text-zinc-700 mb-1.5">

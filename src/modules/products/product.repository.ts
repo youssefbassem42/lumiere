@@ -55,6 +55,7 @@ export const productRepository = {
 
     const where: Prisma.ProductWhereInput = {
       isPublished: true,
+      stock: { gt: 0 },
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -148,7 +149,7 @@ export const productRepository = {
 
   async findFeatured(limit = 8): Promise<ProductListItem[]> {
     const products = await db.product.findMany({
-      where: { isFeatured: true, isPublished: true },
+      where: { isFeatured: true, isPublished: true, stock: { gt: 0 } },
       select: productListSelect,
       take: limit,
       orderBy: { createdAt: "desc" },

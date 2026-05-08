@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 import { StarRating } from "@/components/ui/StarRating";
 import type { ReviewsResponseDTO } from "@/modules/reviews/review.types";
 
@@ -16,8 +17,6 @@ export function ReviewSection({ productId, productSlug, canReview, initialReview
   const [sort, setSort] = useState<"newest" | "highest">("newest");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function loadReviews(nextSort = sort) {
@@ -35,8 +34,6 @@ export function ReviewSection({ productId, productSlug, canReview, initialReview
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const res = await fetch("/api/reviews", {
@@ -46,15 +43,15 @@ export function ReviewSection({ productId, productSlug, canReview, initialReview
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Unable to submit review.");
+        toast.error(data.error ?? "Unable to submit review.");
         return;
       }
-      setMessage("Review submitted.");
+      toast.success("Review submitted! Thank you.");
       setComment("");
       setRating(5);
       await loadReviews();
     } catch {
-      setError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -120,8 +117,6 @@ export function ReviewSection({ productId, productSlug, canReview, initialReview
             required
           />
         </div>
-        {message && <p className="text-sm text-green-700">{message}</p>}
-        {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="submit" disabled={!canReview || loading} className="btn btn-primary">
           {loading ? "Submitting..." : "Submit review"}
         </button>

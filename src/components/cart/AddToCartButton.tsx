@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+
+import { toast } from "react-hot-toast";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -10,11 +12,9 @@ interface AddToCartButtonProps {
 
 export function AddToCartButton({ productId, disabled }: AddToCartButtonProps) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function addToCart() {
-    setError(null);
     const response = await fetch("/api/cart/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -23,12 +23,13 @@ export function AddToCartButton({ productId, disabled }: AddToCartButtonProps) {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
-      setError(payload?.error ?? "Unable to add item");
+      toast.error(payload?.error ?? "Unable to add item");
       return;
     }
 
+    toast.success("Added to cart!");
     startTransition(() => {
-      // Just visually complete the transition
+      router.refresh();
     });
   }
 
@@ -45,7 +46,6 @@ export function AddToCartButton({ productId, disabled }: AddToCartButtonProps) {
         </svg>
         {isPending ? "Adding..." : disabled ? "Out of Stock" : "Add to Cart"}
       </button>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
 }

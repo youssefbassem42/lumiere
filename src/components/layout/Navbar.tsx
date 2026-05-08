@@ -103,6 +103,16 @@ export function Navbar() {
                     <Link href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" onClick={() => setProfileOpen(false)}>
                       My Profile
                     </Link>
+                    {session.user?.role === "SELLER" && (
+                      <Link href="/seller" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-medium text-blue-600" onClick={() => setProfileOpen(false)}>
+                        Seller Dashboard
+                      </Link>
+                    )}
+                    {session.user?.role === "ADMIN" && (
+                      <Link href="/admin" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-medium text-purple-600" onClick={() => setProfileOpen(false)}>
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <Link href="/orders" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" onClick={() => setProfileOpen(false)}>
                       My Orders
                     </Link>

@@ -4,26 +4,24 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { toast } from "react-hot-toast";
 
 type FormState = { email: string; password: string; rememberMe: boolean };
 
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({ email: "", password: "", rememberMe: false });
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setForm((f) => ({ ...f, [e.target.name]: value }));
-    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     const result = await signIn("credentials", {
       redirect: false,
@@ -35,12 +33,13 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError(
+      toast.error(
         result.error === "EMAIL_NOT_VERIFIED"
           ? "Please verify your email before signing in."
           : "Invalid email or password. Please try again."
       );
     } else {
+      toast.success("Welcome back!");
       router.push("/");
       router.refresh();
     }
@@ -60,16 +59,6 @@ export default function LoginPage() {
             <h1 className="text-xl font-semibold mt-4 text-zinc-900">Welcome back</h1>
             <p className="text-zinc-500 text-sm mt-1">Sign in to your account</p>
           </div>
-
-          {/* Error */}
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {error}
-            </div>
-          )}
 
           <button
             type="button"

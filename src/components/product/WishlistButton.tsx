@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { toast } from "react-hot-toast";
 
 let cachedWishlistIds: Set<string> | null = null;
 let wishlistFetchPromise: Promise<Set<string>> | null = null;
@@ -71,10 +72,14 @@ export function WishlistButton({ productId, initialInWishlist = false, className
           // Revert on failure
           setInWishlist(previousState);
           updateWishlistCache(productId, previousState);
+          toast.error("Failed to update wishlist");
+        } else {
+          toast.success(nextState ? "Added to wishlist" : "Removed from wishlist");
         }
       } catch {
         setInWishlist(previousState);
         updateWishlistCache(productId, previousState);
+        toast.error("Something went wrong");
       }
     });
   };

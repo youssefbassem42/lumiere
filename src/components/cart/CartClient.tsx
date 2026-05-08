@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 import type { CartDTO } from "@/modules/cart/cart.types";
 
 const emptyCart: CartDTO = { id: "empty", items: [], subtotal: 0, itemCount: 0 };
@@ -11,13 +12,12 @@ export function CartClient() {
   const [cart, setCart] = useState<CartDTO>(emptyCart);
   const [loading, setLoading] = useState(true);
   const [updatingProductId, setUpdatingProductId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/cart")
       .then((response) => response.json())
       .then(setCart)
-      .catch(() => setError("Unable to load cart"))
+      .catch(() => toast.error("Unable to load cart"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -30,7 +30,8 @@ export function CartClient() {
   async function updateQuantity(productId: string, quantity: number) {
     const previous = cart;
     setUpdatingProductId(productId);
-    setError(null);
+    
+    // Optimistic UI update
     setCart((current) => {
       const items = current.items
         .map((item) =>
@@ -56,8 +57,11 @@ export function CartClient() {
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       setCart(previous);
-      setError(payload?.error ?? "Unable to update cart");
+      toast.error(payload?.error ?? "Unable to update cart");
     } else {
+      if (quantity === 0) {
+        toast.success("Item removed from cart");
+      }
       setCart(await response.json());
     }
     setUpdatingProductId(null);
@@ -76,8 +80,6 @@ export function CartClient() {
         </div>
         <Link href="/products" className="btn btn-secondary">Continue Shopping</Link>
       </div>
-
-      {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {cart.items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center">

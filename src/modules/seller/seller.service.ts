@@ -105,5 +105,25 @@ export const sellerService = {
       lowStock,
       monthlyEarnings
     };
-  }
+  },
+
+  async register(userId: string, data: { shopName: string; description?: string }) {
+    return db.$transaction(async (tx) => {
+      const profile = await tx.sellerProfile.create({
+        data: {
+          userId,
+          shopName: data.shopName,
+          description: data.description,
+          isApproved: true,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { role: "SELLER" },
+      });
+
+      return profile;
+    });
+  },
 };

@@ -13,8 +13,17 @@ export const registerSchema = z
     email: z.string().email("Invalid email address"),
     birthDate: z.coerce.date().max(new Date(), "Birth date must be in the past"),
     gender: z.enum(["MALE", "FEMALE"]),
+    role: z.enum(["USER", "SELLER"]).default("USER"),
+    shopName: z.string().min(2, "Shop name must be at least 2 characters").optional(),
     password: passwordSchema,
     confirmPassword: z.string(),
+  })
+  .refine((data) => {
+    if (data.role === "SELLER" && !data.shopName) return false;
+    return true;
+  }, {
+    message: "Shop name is required for sellers",
+    path: ["shopName"],
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

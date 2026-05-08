@@ -32,6 +32,23 @@ export default async function SellerProductsPage() {
     revalidatePath("/seller/products");
   }
 
+  async function restockProduct(formData: FormData) {
+    "use server";
+    const userSession = await getServerSession(authOptions);
+    if (!userSession?.user) return;
+    
+    const productId = formData.get("productId") as string;
+    const amount = parseInt(formData.get("amount") as string, 10);
+    const sellerProf = await sellerService.getProfile(userSession.user.id);
+    if (!sellerProf) return;
+
+    await db.product.update({
+      where: { id: productId, sellerId: sellerProf.id },
+      data: { stock: { increment: amount } }
+    });
+    revalidatePath("/seller/products");
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
       <div className="flex justify-between items-center mb-6">
@@ -55,6 +72,7 @@ export default async function SellerProductsPage() {
                 <th className="py-3 font-medium">Product</th>
                 <th className="py-3 font-medium">Price</th>
                 <th className="py-3 font-medium">Stock</th>
+                <th className="py-3 font-medium">Restock</th>
                 <th className="py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -71,7 +89,28 @@ export default async function SellerProductsPage() {
                       {product.stock} in stock
                     </span>
                   </td>
+                  <td className="py-4">
+                    <form action={restockProduct} className="flex items-center gap-2">
+                      <input type="hidden" name="productId" value={product.id} />
+                      <input 
+                        type="number" 
+                        name="amount" 
+                        min="1" 
+                        defaultValue="10" 
+                        className="w-16 h-8 text-xs border border-slate-200 rounded px-2 focus:ring-1 focus:ring-blue-500 outline-none" 
+                      />
+                      <button type="submit" className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700">
+                        Add
+                      </button>
+                    </form>
+                  </td>
                   <td className="py-4 text-right space-x-2">
+                    <Link 
+                      href={`/seller/products/edit/${product.id}`}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors inline-block"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">edit</span>
+                    </Link>
                     <form action={deleteProduct} className="inline-block">
                       <input type="hidden" name="productId" value={product.id} />
                       <button type="submit" className="p-1.5 text-slate-400 hover:text-red-600 transition-colors">

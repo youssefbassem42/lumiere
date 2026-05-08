@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState, useMemo } from "react";
+import { toast } from "react-hot-toast";
 import type { CartDTO } from "@/modules/cart/cart.types";
 
 declare global {
@@ -28,12 +29,11 @@ declare global {
 
 type Provider = "stripe" | "paypal" | "cod";
 
+
 export function CheckoutClient() {
   const router = useRouter();
   const [provider, setProvider] = useState<Provider>("stripe");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   
   const [cart, setCart] = useState<CartDTO | null>(null);
   const [promoCode, setPromoCode] = useState<string>("");
@@ -48,7 +48,7 @@ export function CheckoutClient() {
     fetch("/api/cart")
       .then((response) => response.json())
       .then(setCart)
-      .catch(() => setError("Unable to load cart"));
+      .catch(() => toast.error("Unable to load cart"));
   }, []);
 
   const summary = useMemo(() => {
@@ -70,7 +70,6 @@ export function CheckoutClient() {
   async function applyPromo() {
     if (!promoCode) return;
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/promos/validate", {
         method: "POST",
@@ -84,14 +83,12 @@ export function CheckoutClient() {
       if (data.discountType === "PERCENTAGE") {
         setDiscountPercent(data.discountValue);
       } else {
-        // For fixed discounts, we'll need to calculate the percentage equivalent 
-        // or update the summary logic. For now, let's support percentage in the state.
         const percent = Math.min(100, (data.discountValue / (cart?.subtotal || 1)) * 100);
         setDiscountPercent(percent);
       }
-      setMessage("Promo code applied!");
+      toast.success("Promo code applied!");
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
       setDiscountPercent(0);
     } finally {
       setLoading(false);
@@ -123,9 +120,10 @@ export function CheckoutClient() {
         createOrder: () => paypalOrderId,
         onApprove: async (_data, actions) => {
           await actions.order.capture();
+          toast.success("Payment successful!");
           router.push(`/checkout/success?orderId=${orderId}`);
         },
-        onError: () => setError("PayPal payment failed. Please try again."),
+        onError: () => toast.error("PayPal payment failed. Please try again."),
       }).render("#paypal-buttons");
     };
 
@@ -145,7 +143,6 @@ export function CheckoutClient() {
   async function startCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setError(null);
     setStripeClientSecret(null);
     setPaypalOrderId(null);
 
@@ -172,12 +169,13 @@ export function CheckoutClient() {
     setLoading(false);
 
     if (!response.ok) {
-      setError(payload?.error ?? "Checkout failed");
+      toast.error(payload?.error ?? "Checkout failed");
       return;
     }
 
     setOrderId(payload.orderId);
     if (provider === "cod") {
+      toast.success("Order placed successfully!");
       router.push(`/checkout/success?orderId=${payload.orderId}&provider=cod`);
       return;
     }
@@ -191,7 +189,7 @@ export function CheckoutClient() {
       | null;
 
     if (!refs) {
-      setError("Stripe payment form is still loading.");
+      toast.error("Stripe payment form is still loading.");
       return;
     }
 
@@ -200,13 +198,12 @@ export function CheckoutClient() {
       confirmParams: { return_url: `${window.location.origin}/checkout/success?orderId=${orderId}` },
     });
 
-    if (result.error) setError(result.error.message ?? "Stripe payment failed");
+    if (result.error) toast.error(result.error.message ?? "Stripe payment failed");
   }
 
   async function updateQuantity(productId: string, quantity: number) {
     if (!cart) return;
     const previous = cart;
-    setError(null);
     setCart((current) => {
       if (!current) return current;
       const items = current.items
@@ -233,8 +230,11 @@ export function CheckoutClient() {
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       setCart(previous);
-      setError(payload?.error ?? "Unable to update cart");
+      toast.error(payload?.error ?? "Unable to update cart");
     } else {
+      if (quantity === 0) {
+        toast.success("Item removed from cart");
+      }
       setCart(await response.json());
     }
   }
@@ -247,8 +247,6 @@ export function CheckoutClient() {
         <Link href="/cart" className="text-sm text-blue-600 hover:text-blue-700">Back to cart</Link>
         <h1 className="text-3xl font-bold text-slate-900 mt-2">Checkout</h1>
       </div>
-
-      {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
         <form onSubmit={startCheckout} className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6 h-fit">

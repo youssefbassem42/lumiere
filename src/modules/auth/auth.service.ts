@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { emailService } from "@/services/email.service";
 import { AppError } from "@/modules/shared/errors";
 import { authRepository } from "./auth.repository";
+import { db } from "@/lib/db";
 import type { RegisterDTO, AuthUser } from "./auth.types";
 
 const VERIFICATION_TOKEN_MINUTES = 60 * 24;
@@ -58,6 +59,16 @@ export const authService = {
       verificationExpiry,
     });
 
+    if (data.role === "SELLER" && data.shopName) {
+      await db.sellerProfile.create({
+        data: {
+          userId: user.id,
+          shopName: data.shopName,
+          isApproved: true, // Auto-approve for now
+        },
+      });
+    }
+
     const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
     await emailService.sendVerificationEmail({
       to: user.email,
@@ -107,6 +118,31 @@ export const authService = {
     const hashedPassword = await bcrypt.hash(password, 12);
     await authRepository.updatePassword(user.id, hashedPassword);
     return { reset: true };
+  },
+
+  async resendVerificationEmail(email: string) {
+    const user = await authRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError("No account found with this email", 404, "USER_NOT_FOUND");
+    }
+    if (user.emailVerified) {
+      throw new AppError("Email is already verified", 400, "EMAIL_ALREADY_VERIFIED");
+    }
+
+    const verificationToken = createSecureToken();
+    const verificationTokenHash = hashToken(verificationToken);
+    const verificationExpiry = addMinutes(new Date(), VERIFICATION_TOKEN_MINUTES);
+
+    await authRepository.updateVerificationToken(user.id, verificationTokenHash, verificationExpiry);
+
+    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    await emailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verificationUrl: `${baseUrl}/verify-email?token=${verificationToken}`,
+    });
+
+    return { sent: true };
   },
 
   async findById(id: string): Promise<AuthUser | null> {

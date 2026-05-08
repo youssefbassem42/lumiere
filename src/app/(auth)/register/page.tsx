@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { toast } from "react-hot-toast";
 
 type FormState = {
   name: string;
   email: string;
   birthDate: string;
   gender: "MALE" | "FEMALE" | "";
+  role: "USER" | "SELLER";
+  shopName: string;
   password: string;
   confirmPassword: string;
 };
@@ -21,20 +24,19 @@ export default function RegisterPage() {
     email: "",
     birthDate: "",
     gender: "",
+    role: "USER",
+    shopName: "",
     password: "",
     confirmPassword: "",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
     setErrors((err) => ({ ...err, [name]: undefined }));
-    setServerError(null);
   };
 
   const validate = (): boolean => {
@@ -45,6 +47,8 @@ export default function RegisterPage() {
       errs.email = "Enter a valid email address";
     if (!form.birthDate) errs.birthDate = "Birth date is required";
     if (!form.gender) errs.gender = "Gender is required";
+    if (form.role === "SELLER" && (!form.shopName || form.shopName.trim().length < 2))
+      errs.shopName = "Shop name must be at least 2 characters";
     if (!form.password || form.password.length < 8)
       errs.password = "Password must be at least 8 characters";
     else if (!/[A-Z]/.test(form.password))
@@ -64,7 +68,6 @@ export default function RegisterPage() {
     if (!validate()) return;
 
     setLoading(true);
-    setServerError(null);
 
     try {
       const res = await fetch("/api/auth/register", {
@@ -75,6 +78,8 @@ export default function RegisterPage() {
           email: form.email,
           birthDate: form.birthDate,
           gender: form.gender,
+          role: form.role,
+          shopName: form.role === "SELLER" ? form.shopName : undefined,
           password: form.password,
           confirmPassword: form.confirmPassword,
         }),
@@ -82,16 +87,16 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setServerError(data.error ?? "Registration failed. Please try again.");
+        toast.error(data.error ?? "Registration failed. Please try again.");
         setLoading(false);
         return;
       }
 
       const data = await res.json();
-      setSuccess(data.message ?? "Account created. Please check your email to verify your account.");
-      setForm({ name: "", email: "", birthDate: "", gender: "", password: "", confirmPassword: "" });
+      toast.success(data.message ?? "Account created! Please check your email.");
+      setForm({ name: "", email: "", birthDate: "", gender: "", role: "USER", shopName: "", password: "", confirmPassword: "" });
     } catch {
-      setServerError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -126,21 +131,6 @@ export default function RegisterPage() {
             <p className="text-zinc-500 text-sm mt-1">Join thousands of happy customers</p>
           </div>
 
-          {serverError && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {serverError}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-              {success}
-            </div>
-          )}
-
           <button
             type="button"
             onClick={() => signIn("google", { callbackUrl: "/" })}
@@ -156,6 +146,93 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Role Selection */}
+            <div className="mb-8">
+              <label className="block text-sm font-semibold text-zinc-700 mb-4 text-center">I want to register as a:</label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, role: "USER" }))}
+                  className={`group relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all duration-300 ${
+                    form.role === "USER" 
+                      ? "border-blue-600 bg-blue-50/30 shadow-lg shadow-blue-100 ring-4 ring-blue-50/50" 
+                      : "border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50/50 shadow-sm"
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    form.role === "USER" 
+                      ? "bg-blue-600 text-white scale-110 rotate-3" 
+                      : "bg-zinc-100 text-zinc-400 group-hover:scale-105"
+                  }`}>
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <span className={`block text-sm font-bold ${form.role === "USER" ? "text-blue-700" : "text-zinc-600"}`}>Customer</span>
+                    <span className="text-[10px] text-zinc-400 font-medium">Shop products</span>
+                  </div>
+                  {form.role === "USER" && (
+                    <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-1 shadow-md">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, role: "SELLER" }))}
+                  className={`group relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all duration-300 ${
+                    form.role === "SELLER" 
+                      ? "border-purple-600 bg-purple-50/30 shadow-lg shadow-purple-100 ring-4 ring-purple-50/50" 
+                      : "border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50/50 shadow-sm"
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    form.role === "SELLER" 
+                      ? "bg-purple-600 text-white scale-110 -rotate-3" 
+                      : "bg-zinc-100 text-zinc-400 group-hover:scale-105"
+                  }`}>
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <span className={`block text-sm font-bold ${form.role === "SELLER" ? "text-purple-700" : "text-zinc-600"}`}>Seller</span>
+                    <span className="text-[10px] text-zinc-400 font-medium">Sell products</span>
+                  </div>
+                  {form.role === "SELLER" && (
+                    <div className="absolute -top-2 -right-2 bg-purple-600 text-white rounded-full p-1 shadow-md">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {form.role === "SELLER" && (
+              <div className="animate-fade-in">
+                <label htmlFor="register-shopName" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                  Shop Name *
+                </label>
+                <input
+                  id="register-shopName"
+                  name="shopName"
+                  type="text"
+                  required
+                  value={form.shopName}
+                  onChange={handleChange}
+                  placeholder="Your brand name"
+                  className={`input ${errors.shopName ? "input-error" : ""}`}
+                />
+                {errors.shopName && <p className="text-red-600 text-xs mt-1">{errors.shopName}</p>}
+              </div>
+            )}
+
             {fields.map((f) => (
               <div key={f.key}>
                 <label htmlFor={`register-${f.key}`} className="block text-sm font-medium text-zinc-700 mb-1.5">

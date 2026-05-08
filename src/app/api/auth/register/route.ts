@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, password, birthDate, gender } = parsed.data;
-    const user = await authService.register({ name, email, password, birthDate, gender });
+    const { name, email, password, birthDate, gender, role, shopName } = parsed.data;
+    const user = await authService.register({ name, email, password, birthDate, gender, role, shopName });
 
     return NextResponse.json(
       { message: "Account created. Please check your email to verify your account.", user },

@@ -18,6 +18,7 @@ export const authRepository = {
         password: data.hashedPassword,
         birthDate: data.birthDate,
         gender: data.gender,
+        role: data.role || "USER",
         emailVerificationToken: data.verificationToken,
         emailVerificationExpiry: data.verificationExpiry,
       },
@@ -65,6 +66,16 @@ export const authRepository = {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpiry: null,
+      },
+    });
+  },
+
+  updateVerificationToken(userId: string, token: string, expires: Date) {
+    return db.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationToken: token,
+        emailVerificationExpiry: expires,
       },
     });
   },

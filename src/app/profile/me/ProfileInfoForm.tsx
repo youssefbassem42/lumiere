@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 type ProfileUser = {
   name: string | null;
@@ -21,7 +22,6 @@ export default function ProfileInfoForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   
   if (mode === "password") {
     return (
@@ -30,7 +30,6 @@ export default function ProfileInfoForm({
         onSubmit={async (e) => {
           e.preventDefault();
           setLoading(true);
-          setMessage("");
           const formData = new FormData(e.currentTarget);
           const data = Object.fromEntries(formData);
           
@@ -44,10 +43,10 @@ export default function ProfileInfoForm({
           setLoading(false);
           
           if (res.ok) {
-            setMessage("Password updated successfully");
+            toast.success("Password updated successfully");
             (e.target as HTMLFormElement).reset();
           } else {
-            setMessage(result.error || "Failed to update password");
+            toast.error(result.error || "Failed to update password");
           }
         }}
       >
@@ -59,8 +58,6 @@ export default function ProfileInfoForm({
           <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">New Password</label>
           <input name="newPassword" required className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all" type="password" />
         </div>
-        
-        {message && <div className="text-sm text-blue-600">{message}</div>}
         
         <Link href="/reset-password" className="text-sm text-blue-600 hover:underline mt-2">
           Forgot password?
@@ -82,7 +79,6 @@ export default function ProfileInfoForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setLoading(true);
-        setMessage("");
         const formData = new FormData(e.currentTarget);
         const data = Object.fromEntries(formData);
         
@@ -96,10 +92,10 @@ export default function ProfileInfoForm({
         setLoading(false);
         
         if (res.ok) {
-          setMessage("Profile updated successfully");
+          toast.success("Profile updated successfully");
           router.refresh();
         } else {
-          setMessage(result.error || "Failed to update profile");
+          toast.error(result.error || "Failed to update profile");
         }
       }}
     >
@@ -115,8 +111,6 @@ export default function ProfileInfoForm({
         <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Phone Number</label>
         <input name="phone" defaultValue={defaultPhone} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-all" type="tel" />
       </div>
-
-      {message && <div className="text-sm text-blue-600">{message}</div>}
 
       <button disabled={loading} className="mt-2 w-full bg-blue-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg px-6 py-3 hover:opacity-90 transition-opacity disabled:opacity-50" type="submit">
         {loading ? "Saving..." : "Save Changes"}
