@@ -1,13 +1,12 @@
 import { randomUUID } from "crypto";
-import { getServerSession } from "next-auth";
 import type { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import type { CartIdentity } from "./cart.types";
 
 export const GUEST_CART_COOKIE = "lumiere_guest_id";
 
 export async function getCartIdentity(request: NextRequest): Promise<CartIdentity> {
-  const session = await getServerSession(authOptions);
+  const session = await getRequestSession(request);
   const userId = session?.user?.id;
   const guestId = request.cookies.get(GUEST_CART_COOKIE)?.value;
   return { userId, guestId };

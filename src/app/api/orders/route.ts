@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { orderService } from "@/modules/orders/order.service";
 import { orderQuerySchema } from "@/modules/orders/order.validators";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const parsed = orderQuerySchema.safeParse(

@@ -1,14 +1,42 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { Role } from "@prisma/client";
 import { emailService } from "@/services/email.service";
 import { AppError } from "@/modules/shared/errors";
 import { authRepository } from "./auth.repository";
 import { db } from "@/lib/db";
-import type { RegisterDTO, AuthUser } from "./auth.types";
+import type { RegisterDTO, LoginDTO, LoginResult, AuthUser } from "./auth.types";
 
 const VERIFICATION_TOKEN_MINUTES = 60 * 24;
 const RESET_TOKEN_MINUTES = 15;
+const REMEMBER_ME_DAYS = 30;
+const STANDARD_SESSION_DAYS = 1;
+
+function signToken(user: { id: string; name: string | null; email: string; role: Role; avatar: string | null; emailVerified: Date | null }, rememberMe: boolean): LoginResult {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new AppError("JWT secret is not configured", 500, "JWT_SECRET_MISSING");
+  }
+
+  const expiresInSeconds =
+    (rememberMe ? REMEMBER_ME_DAYS : STANDARD_SESSION_DAYS) * 24 * 60 * 60;
+
+  const token = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+    secret,
+    { algorithm: "HS256", expiresIn: expiresInSeconds }
+  );
+
+  const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+
+  return { token, expiresAt, user: publicUser(user) };
+}
 
 function createSecureToken() {
   return crypto.randomBytes(32).toString("hex");
@@ -41,6 +69,29 @@ function publicUser(user: {
 }
 
 export const authService = {
+  async login(data: LoginDTO): Promise<LoginResult> {
+    const user = await authRepository.findByEmail(data.email);
+    if (!user?.password) {
+      throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    }
+
+    const isValid = await bcrypt.compare(data.password, user.password);
+    if (!isValid) {
+      throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    }
+    if (!user.emailVerified) {
+      throw new AppError("Email is not verified", 403, "EMAIL_NOT_VERIFIED");
+    }
+    if (user.deletedAt) {
+      throw new AppError("Account has been deleted", 403, "ACCOUNT_DELETED");
+    }
+    if (user.isRestricted) {
+      throw new AppError("Account is restricted", 403, "ACCOUNT_RESTRICTED");
+    }
+
+    return signToken(user, data.rememberMe ?? false);
+  },
+
   async register(data: RegisterDTO): Promise<AuthUser> {
     const existing = await authRepository.findByEmail(data.email);
     if (existing) {

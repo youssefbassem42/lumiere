@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 import { z } from "zod";
@@ -20,7 +19,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
 
     const { id } = await params;
@@ -59,7 +58,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
 
     const { id } = await params;

@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { wishlistService } from "@/modules/wishlist/wishlist.service";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 
@@ -9,7 +8,7 @@ export async function DELETE(
   { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const { productId } = await params;

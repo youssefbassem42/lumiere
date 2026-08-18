@@ -1,12 +1,11 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { userService, updateProfileSchema } from "@/modules/users/user.service";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const user = await userService.getUser(session.user.id);
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const body = await request.json();

@@ -4,6 +4,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 
 const rememberMeDays = 30;
@@ -113,6 +115,63 @@ import { getServerSession } from "next-auth";
 
 export async function getSession() {
   return await getServerSession(authOptions);
+}
+
+export interface ApiSessionUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+}
+
+export interface ApiSession {
+  user: ApiSessionUser;
+}
+
+export async function getRequestSession(request: NextRequest): Promise<ApiSession | null> {
+  const cookieSession = await getServerSession(authOptions);
+  if (cookieSession?.user?.id) {
+    return {
+      user: {
+        id: cookieSession.user.id as string,
+        email: cookieSession.user.email as string,
+        name: cookieSession.user.name ?? null,
+        role: (cookieSession.user as { role?: string }).role ?? "USER",
+      },
+    };
+  }
+
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return null;
+
+  let payload: jwt.JwtPayload;
+  try {
+    payload = jwt.verify(authHeader.slice("Bearer ".length), secret, {
+      algorithms: ["HS256"],
+    }) as jwt.JwtPayload;
+  } catch {
+    return null;
+  }
+
+  if (!payload.sub || typeof payload.sub !== "string") return null;
+
+  const dbUser = await db.user.findUnique({
+    where: { id: payload.sub },
+    select: { id: true, email: true, name: true, role: true, isRestricted: true, deletedAt: true },
+  });
+  if (!dbUser || dbUser.deletedAt || dbUser.isRestricted) return null;
+
+  return {
+    user: {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role,
+    },
+  };
 }
 
 export async function isAuthenticated() {

@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { reviewService } from "@/modules/reviews/review.service";
 import { reviewUpdateSchema } from "@/modules/reviews/review.validators";
 import { toErrorResponse } from "@/modules/shared/errors";
@@ -11,7 +10,7 @@ interface Props {
 
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
@@ -34,9 +33,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: Props) {
+export async function DELETE(request: NextRequest, { params }: Props) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }

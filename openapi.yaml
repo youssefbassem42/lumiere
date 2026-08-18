@@ -5,16 +5,17 @@ info:
     OpenAPI specification for the Lumière e-commerce store (Next.js App Router API).
     Enables AI discovery, search, and recommendations via Navi AI Commerce.
 
-    Authentication: this API uses NextAuth session cookies (next-auth.session-token) for
-    protected endpoints. Login is performed via POST /api/auth/callback/credentials
-    (form-encoded, no JSON token is returned). No bearer-JWT endpoint exists; BearerAuth
-    is declared as a reserved scheme only. Admin management (users, orders, coupons,
-    inventory) is implemented server-side and has no REST endpoints.
+    Authentication: protected endpoints accept either a NextAuth session cookie
+    (next-auth.session-token) or a bearer JWT obtained from POST /api/auth/login
+    (JSON, returns a signed JWT with expiry). Cookie login is performed via
+    POST /api/auth/callback/credentials (form-encoded, no JSON token is returned).
+    Admin management (users, orders, coupons, inventory) is implemented server-side
+    and has no REST endpoints.
   version: 1.0.0
   license:
     name: Proprietary
 servers:
-  - url: https://lumiere-e-commerce.vercel.app
+  - url: https://lumier-commerce.vercel.app
 security: []
 components:
   securitySchemes:
@@ -88,6 +89,16 @@ components:
           type: string
           format: date-time
           nullable: true
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
     ProductImage:
       type: object
       properties:
@@ -781,6 +792,57 @@ components:
         received:
           type: boolean
 paths:
+  /api/auth/login:
+    post:
+      summary: Log in with email and password, receive a bearer JWT
+      description: >
+        JSON POST. On success returns a signed HS256 JWT (expires in 1 day, or 30 days
+        with rememberMe: true) plus the token expiry timestamp and the user record.
+        Use the token as Authorization: Bearer <token> for protected endpoints.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                rememberMe:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Login successful, JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Email not verified, account deleted, or account restricted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/auth/register:
     post:
       summary: Register a new user (USER or SELLER)
@@ -1283,6 +1345,7 @@ paths:
         - Checkout
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1315,6 +1378,7 @@ paths:
         - Orders
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: page
           in: query
@@ -1351,6 +1415,7 @@ paths:
         - Orders
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1383,6 +1448,7 @@ paths:
         - Orders
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1462,6 +1528,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1514,6 +1581,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1565,6 +1633,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1603,6 +1672,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1647,6 +1717,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1696,6 +1767,7 @@ paths:
         - Reviews
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1734,6 +1806,7 @@ paths:
         - Seller
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1779,6 +1852,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       responses:
         "200":
           description: Current user profile
@@ -1804,6 +1878,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1836,6 +1911,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       responses:
         "200":
           description: Address list (bare array)
@@ -1855,6 +1931,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1887,6 +1964,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1930,6 +2008,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1962,6 +2041,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1994,6 +2074,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       responses:
         "200":
           description: Recently viewed products (bare array)
@@ -2013,6 +2094,7 @@ paths:
         - User
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -2050,6 +2132,7 @@ paths:
         - Wishlist
       security:
         - CookieAuth: []
+        - BearerAuth: []
       responses:
         "200":
           description: Wishlist product ids
@@ -2069,6 +2152,7 @@ paths:
         - Wishlist
       security:
         - CookieAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -2106,6 +2190,7 @@ paths:
         - Wishlist
       security:
         - CookieAuth: []
+        - BearerAuth: []
       parameters:
         - name: productId
           in: path

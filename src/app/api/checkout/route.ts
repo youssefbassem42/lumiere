@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { checkoutService } from "@/modules/checkout/checkout.service";
 import { checkoutSchema } from "@/modules/checkout/checkout.validators";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
@@ -8,7 +7,7 @@ import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     const guestId = (await cookies()).get("guest_cart_id")?.value;
     
     if (!session?.user?.id && !guestId) {

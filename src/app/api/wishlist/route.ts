@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { wishlistService } from "@/modules/wishlist/wishlist.service";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 import { z } from "zod";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const productIds = await wishlistService.getWishlistProductIds(session.user.id);
@@ -24,7 +23,7 @@ const toggleSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const body = await request.json();

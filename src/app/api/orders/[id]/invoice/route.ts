@@ -1,16 +1,15 @@
-import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { generateInvoicePdf } from "@/modules/orders/invoice.service";
 import { orderService } from "@/modules/orders/order.service";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getRequestSession(request);
     if (!session?.user?.id) throw new AppError("Authentication required", 401, "UNAUTHORIZED");
 
     const { id } = await params;

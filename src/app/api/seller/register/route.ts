@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getRequestSession } from "@/lib/auth";
 import { sellerService } from "@/modules/seller/seller.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getRequestSession(request);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

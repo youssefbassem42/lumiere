@@ -22,6 +22,13 @@ export interface RegisterDTO {
 export interface LoginDTO {
   email: string;
   password: string;
+  rememberMe?: boolean;
+}
+
+export interface LoginResult {
+  token: string;
+  expiresAt: string;
+  user: AuthUser;
 }
 
 export interface AuthResponse {
