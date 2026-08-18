@@ -7,6 +7,10 @@ export const orderService = {
     return orderRepository.findManyForUser(userId, query);
   },
 
+  async getAllOrders(query: OrderQueryDTO) {
+    return orderRepository.findManyAll(query);
+  },
+
   async getOrder(userId: string, orderId: string) {
     const order = await orderRepository.findByIdForUser(userId, orderId);
     if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");

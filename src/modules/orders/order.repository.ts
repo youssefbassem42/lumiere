@@ -6,6 +6,34 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+const orderListSelect = {
+  id: true,
+  status: true,
+  totalAmount: true,
+  currency: true,
+  createdAt: true,
+  items: { select: { quantity: true } },
+} as const;
+
+function toPaginatedDTO(total: number, orders: Array<{ id: string; status: string; totalAmount: number; currency: string; createdAt: Date; items: Array<{ quantity: number }> }>, query: OrderQueryDTO): PaginatedOrdersDTO {
+  return {
+    data: orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      currency: order.currency,
+      itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+      createdAt: order.createdAt.toISOString(),
+    })),
+    meta: {
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.ceil(total / query.limit),
+    },
+  };
+}
+
 export const orderRepository = {
   async findManyForUser(userId: string, query: OrderQueryDTO): Promise<PaginatedOrdersDTO> {
     const skip = (query.page - 1) * query.limit;
@@ -17,33 +45,27 @@ export const orderRepository = {
         orderBy: { createdAt: "desc" },
         skip,
         take: query.limit,
-        select: {
-          id: true,
-          status: true,
-          totalAmount: true,
-          currency: true,
-          createdAt: true,
-          items: { select: { quantity: true } },
-        },
+        select: orderListSelect,
       }),
     ]);
 
-    return {
-      data: orders.map((order) => ({
-        id: order.id,
-        status: order.status,
-        totalAmount: order.totalAmount,
-        currency: order.currency,
-        itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-        createdAt: order.createdAt.toISOString(),
-      })),
-      meta: {
-        total,
-        page: query.page,
-        limit: query.limit,
-        totalPages: Math.ceil(total / query.limit),
-      },
-    };
+    return toPaginatedDTO(total, orders, query);
+  },
+
+  async findManyAll(query: OrderQueryDTO): Promise<PaginatedOrdersDTO> {
+    const skip = (query.page - 1) * query.limit;
+
+    const [total, orders] = await db.$transaction([
+      db.order.count(),
+      db.order.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+        select: orderListSelect,
+      }),
+    ]);
+
+    return toPaginatedDTO(total, orders, query);
   },
 
   async findByIdForUser(userId: string, orderId: string): Promise<OrderDetailDTO | null> {

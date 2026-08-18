@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const orders = await orderService.getOrders(session.user.id, parsed.data);
+    const orders =
+      session.user.role === "ADMIN"
+        ? await orderService.getAllOrders(parsed.data)
+        : await orderService.getOrders(session.user.id, parsed.data);
     return NextResponse.json(orders);
   } catch (error) {
     const { body, status } = toErrorResponse(error);
