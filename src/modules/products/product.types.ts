@@ -22,6 +22,20 @@ export interface ProductListItem {
   category: ProductCategory;
   avgRating: number;
   reviewCount: number;
+  // Canonical AI Commerce fields (source aliases for the integration sync)
+  title?: string;
+  handle?: string;
+  description?: string | null;
+  stockQuantity?: number;
+  inventory_quantity?: number;
+  categoryId?: string;
+  categoryName?: string;
+  image_url?: string | null;
+  compareAtPrice?: number | null;
+  sku?: string | null;
+  external_id?: string;
+  status?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProductDetail extends ProductListItem {
