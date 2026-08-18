@@ -34,12 +34,8 @@ export default function RootLayout({
           <main className="flex-1 pt-20">{children}</main>
           <Footer />
         </Providers>
-        <Script
-
-            src="https://aicommerce-ai-service-production.up.railway.app/widget/v1/widget.js"
-            data-widget-key="wi_rt7f6tPtwZvnvsU8cbT3aAOo_tKRaWT85u4b3_rXX-g"
-
-        />
+        <Script src="https://aicommerce-ai-service-production.up.railway.app/widget/v1/widget.js"
+                data-widget-key="wi_mrU6qDQMvUjrNDA0w6937I_wC8WGBwfH51rBujw17j0"/>
       </body>
     </html>
   );
