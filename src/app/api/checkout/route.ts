@@ -3,12 +3,13 @@ import { getRequestSession } from "@/lib/auth";
 import { checkoutService } from "@/modules/checkout/checkout.service";
 import { checkoutSchema } from "@/modules/checkout/checkout.validators";
 import { AppError, toErrorResponse } from "@/modules/shared/errors";
+import { GUEST_CART_COOKIE } from "@/modules/cart/cart.http";
 import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getRequestSession(request);
-    const guestId = (await cookies()).get("guest_cart_id")?.value;
+    const guestId = (await cookies()).get(GUEST_CART_COOKIE)?.value;
     
     if (!session?.user?.id && !guestId) {
       throw new AppError("Authentication required or missing guest cart", 401, "UNAUTHORIZED");

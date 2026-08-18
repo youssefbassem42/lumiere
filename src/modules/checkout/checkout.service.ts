@@ -89,11 +89,15 @@ export const checkoutService = {
           : dto.guestEmail;
 
         if (email) {
-          await emailService.sendOrderConfirmation({
-            to: email,
-            orderId: order.id,
-            totalAmount: order.totalAmount,
-          });
+          await emailService
+            .sendOrderConfirmation({
+              to: email,
+              orderId: order.id,
+              totalAmount: order.totalAmount,
+            })
+            .catch((error) => {
+              console.error("[checkout:email]", error instanceof Error ? error.message : error);
+            });
         }
 
         await this.notifySellers(order.id).catch(console.error);
