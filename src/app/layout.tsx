@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -33,6 +34,11 @@ export default function RootLayout({
           <main className="flex-1 pt-20">{children}</main>
           <Footer />
         </Providers>
+        <Script
+          src="https://aicommerce-ai-service-production.up.railway.app/widget/v1/widget.js"
+          data-widget-key="wi_g9rMTKRa8ksymrhAdTZ97R2Qj5ZCDBvhIGht8xRGNbY"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
