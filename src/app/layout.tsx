@@ -35,8 +35,9 @@ export default function RootLayout({
           <Footer />
         </Providers>
         <Script  
-            src="https://aicommerce-ai-service-production.up.railway.app/widget/v1/widget.js"
-            data-widget-key="wi_8564d4c9-c2e0-4cbc-b43c-ae891c19ebc0"
+          
+  src="https://aicommerce-ai-service-production.up.railway.app/widget/v1/widget.js"
+  data-widget-key="wi_yafbuVLOmGMYFaCm30cLf2ajOAqtBJlKZ91Kbi5G42g"
 
 />
       </body>
