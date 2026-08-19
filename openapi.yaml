@@ -15,7 +15,7 @@ info:
   license:
     name: Proprietary
 servers:
-  - url: https://lumier-commerce.vercel.app
+  - url: https://lumie-commerce.vercel.app
 security: []
 components:
   securitySchemes:
